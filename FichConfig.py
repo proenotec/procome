@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 
 # #############################################################################################################################
 # #### Dependencias
@@ -126,7 +126,7 @@ class FichConfig:
     
 
   # ***************************************************************************************************************************
-  # *** Obtener todos los par�metros en un diccionario
+  # *** Obtener todos los parï¿½metros en un diccionario
   # ***************************************************************************************************************************
   #
   # Devuelve un texto
@@ -249,7 +249,7 @@ class FichConfig:
   # - En self._dParametros estan todos los parametros, actualizados al valor leido del fichero
   # Si hay error:
   # - La funcion devuelve un texto con una descripcion del error
-  # - Los valores que est�n en self._dParametros no son fiables
+  # - Los valores que estï¿½n en self._dParametros no son fiables
   
   def LeerDeFichero(self):
   
@@ -383,7 +383,7 @@ class FichConfig:
         bHayError= not (self.Protocolo_DirRemota_Set(int(sValor)))
 
       if (bHayError) :
-        sTxtError+= '- ERROR: Valor de ' + sNombreParametro + ' no v�lido. Valor= ' + sValor + '\n'
+        sTxtError+= '- ERROR: Valor de ' + sNombreParametro + ' no vï¿½lido. Valor= ' + sValor + '\n'
 
     if (sTxtError != "") :
       self._dParametros= dBackup.copy()

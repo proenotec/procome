@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 
 # #############################################################################################################################
 # #############################################################################################################################
@@ -158,7 +158,7 @@ def ConstruirMensaje_PetDatosCtrl(Direccion, BitFCB):
 
 
 # *****************************************************************************************************************************
-# **** Primario. Construir un mensaje de "Petici髇 de estados digitales de control"
+# **** Primario. Construir un mensaje de "Petici贸n de estados digitales de control"
 # *****************************************************************************************************************************
 
 def ConstruirMensaje_PetEstadosDigCtrl(Direccion, BitFCB):
@@ -173,7 +173,7 @@ def ConstruirMensaje_PetEstadosDigCtrl(Direccion, BitFCB):
 
 
 # *****************************************************************************************************************************
-# **** Primario. Construir un mensaje de sincronizaci髇 a la direcci髇 universal
+# **** Primario. Construir un mensaje de sincronizaci贸n a la direcci贸n universal
 # *****************************************************************************************************************************
 
 def ConstruirMensaje_SincrUniv(Direccion):
@@ -203,7 +203,7 @@ def ConstruirMensaje_SincrUniv(Direccion):
 
   lASDU.append(oAhora.hour)
 
-  # **** Dia de la semana y D韆 del mes **************************************************************************************
+  # **** Dia de la semana y D铆a del mes **************************************************************************************
 
   iDiaDeLaSemana= oAhora.isoweekday() + 1
   if (iDiaDeLaSemana > 7) : iDiaDeLaSemana= 1
@@ -213,7 +213,7 @@ def ConstruirMensaje_SincrUniv(Direccion):
 
   lASDU.append(oAhora.month)
 
-  # **** Res4 y A駉 ***********************************************************************************************************
+  # **** Res4 y A帽o ***********************************************************************************************************
   
   lASDU.append(oAhora.year % 1000)
 
@@ -223,7 +223,7 @@ def ConstruirMensaje_SincrUniv(Direccion):
 
   return TramaLarga_Construir(True, False, False, 4, 0xFF, lASDU)
 
-# **** FIN **** Primario. Construir un mensaje de sincronizaci髇 a la direcci髇 universal *************************************
+# **** FIN **** Primario. Construir un mensaje de sincronizaci贸n a la direcci贸n universal *************************************
 
 
 # *****************************************************************************************************************************

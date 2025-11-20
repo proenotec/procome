@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 
 # #############################################################################################################################
 # ### Dependencias
@@ -30,7 +30,7 @@ import FichConfig
 #       |
 # [ 20] +- Frame Principal ........................................... (_tkfrFramePpal)
 #          |
-# [100]    +- Arrancar/Parar la comunicaci�n ................... (self._tkbArrancParar)
+# [100]    +- Arrancar/Parar la comunicaciï¿½n ................... (self._tkbArrancParar)
 #          |
 # [110]    +- Medidas .................................................. (_tklfMedidas)
 #          |
@@ -81,11 +81,11 @@ class FormPpal:
 
     # **** Crear la ventana grafica *******************************************************************************************
     #
-    # De momento solo se abre por si es necesario dar alg�n mensaje
+    # De momento solo se abre por si es necesario dar algï¿½n mensaje
 
     self._tkWindow = tk.Tk()
     self._tkWindow.title('PROCOME')
-    self._tkWindow.resizable(False,False)       # No se permite al usuario que cambie el tama�o de la pantalla
+    self._tkWindow.resizable(False,False)       # No se permite al usuario que cambie el tamaï¿½o de la pantalla
     self._tkWindow.protocol('WM_DELETE_WINDOW', self._MenuArchivoSalir)
     # self._tkWindow.state('icon')
 
@@ -103,7 +103,7 @@ class FormPpal:
              str(self._oCSerie.bytesize) + ',' + str(self._oCSerie.stopbits)
     self._CSerie_MostrarCfg(sTxtAux)
     
-    # **** Crear el objeto de construir la trama de recepci�n *****************************************************************
+    # **** Crear el objeto de construir la trama de recepciï¿½n *****************************************************************
   
     self._oConstrTramaRcp= PROCOME_ConstruirTramaRcp.PROCOME_ConstruirTramaRcp(0x07)
 
@@ -116,7 +116,7 @@ class FormPpal:
 
     # **** Arracar el temporizado del bucle periodico *************************************************************************
     #
-    # Se pone un tiempo de 15 milisegundos porque es lo m�nimo que soporta WXP
+    # Se pone un tiempo de 15 milisegundos porque es lo mï¿½nimo que soporta WXP
 
     self._fIncrT_TmpAnt= time.time()
     self._tkWindow.after(self._K_fTmoTempBuclePeriodico_ms, self._BuclePeriodico)
@@ -151,19 +151,19 @@ class FormPpal:
     #
     self._tkmbMenuArchivo= tk.Menu(self._tkmbBarraDeMenus)
     self._tkmbBarraDeMenus.add_cascade(menu= self._tkmbMenuArchivo, label= 'Archivo')
-    # self._tkmbMenuArchivo.add_command(label='Leer la configuraci�n', command= self._MenuArchivoLeer)
-    # self._tkmbMenuArchivo.add_command(label='Salvar la configuraci�n', command= self._MenuArchivoSalvar)
+    # self._tkmbMenuArchivo.add_command(label='Leer la configuraciï¿½n', command= self._MenuArchivoLeer)
+    # self._tkmbMenuArchivo.add_command(label='Salvar la configuraciï¿½n', command= self._MenuArchivoSalvar)
     self._tkmbMenuArchivo.add_command(label='Salir', command= self._MenuArchivoSalir)
     
-    # [ 12] --- Barra de menus: Menu "Configuraci�n" -----------------------------------------------
+    # [ 12] --- Barra de menus: Menu "Configuraciï¿½n" -----------------------------------------------
     #
     self._tkmbMenuConfig= tk.Menu(self._tkmbBarraDeMenus)
-    self._tkmbBarraDeMenus.add_cascade(menu= self._tkmbMenuConfig, label= 'Configuración')
+    self._tkmbBarraDeMenus.add_cascade(menu= self._tkmbMenuConfig, label= 'ConfiguraciÃ³n')
     self._tkmbMenuConfig.add_command(label= 'Puerto serie', command= self._MenuCfgPuertoSerie)
-    self._tkmbMenuConfig.add_command(label= 'Configuración general', command= self._MenuCfgGeneral)
+    self._tkmbMenuConfig.add_command(label= 'ConfiguraciÃ³n general', command= self._MenuCfgGeneral)
     self._tkmbMenuConfig.add_separator()
-    self._tkmbMenuConfig.add_command(label= 'Guardar configuración', command= self._MenuCfgGuardar)
-    self._tkmbMenuConfig.add_command(label= 'Cargar configuración', command= self._MenuCfgCargar)
+    self._tkmbMenuConfig.add_command(label= 'Guardar configuraciÃ³n', command= self._MenuCfgGuardar)
+    self._tkmbMenuConfig.add_command(label= 'Cargar configuraciÃ³n', command= self._MenuCfgCargar)
 
 
   # ===========================================================================================================================
@@ -178,9 +178,9 @@ class FormPpal:
     self._tkfrFramePpal.grid(row= 0, column= 0, sticky='nswe')
 
     
-    # [100] ==== Bot�n de arranque/Parada =====================================================================================
+    # [100] ==== Botï¿½n de arranque/Parada =====================================================================================
 
-    self._tkbArrancParar= tk.Button(self._tkfrFramePpal, text= 'Arrancar la comunicación', bg= self._sColorNoComunica)
+    self._tkbArrancParar= tk.Button(self._tkfrFramePpal, text= 'Arrancar la comunicaciÃ³n', bg= self._sColorNoComunica)
     self._tkbArrancParar.grid(padx= 2, pady= 2, row= 0, column= 0, sticky='w')
     self._tkbArrancParar.bind('<ButtonRelease>', self._ArrancarPararComunicacion)
 
@@ -219,7 +219,7 @@ class FormPpal:
       self._ldMedidas[iElemento]['Validez'].grid(padx= 2, pady= 2, row= iFila, column= iSubColumna, sticky='we')
       iSubColumna+=1
 
-      # ---- Preparar la siguiente iteraci�n ----------------------------------------------------------------------------------
+      # ---- Preparar la siguiente iteraciï¿½n ----------------------------------------------------------------------------------
       
       iElemento+= 1
       iColumna+= 1
@@ -265,7 +265,7 @@ class FormPpal:
       self._ldEstados[iElemento]['Validez'].grid(padx= 2, pady= 2, row= iFila, column= iSubColumna, sticky='we')
       iSubColumna+=1
 
-      # ---- Preparar la siguiente iteraci�n ----------------------------------------------------------------------------------
+      # ---- Preparar la siguiente iteraciï¿½n ----------------------------------------------------------------------------------
       
       iElemento+= 1
       iColumna+= 1
@@ -296,27 +296,27 @@ class FormPpal:
 
       self._ldOrdenes.append({'Etiqueta' : None, 'Abrir' : None, 'Cerrar' : None})
 
-      # ���� Label: Ord�n x.Etiqueta �������������������������������������������������������������������������������������������
+      # ï¿½ï¿½ï¿½ï¿½ Label: Ordï¿½n x.Etiqueta ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
       self._ldOrdenes[iElemento]['Etiqueta']= tk.Label(self._tklfOrdenes, text= 'S' + str(iElemento + 1) + ':', bg= self._sColorFondo)
       self._ldOrdenes[iElemento]['Etiqueta'].grid(padx= 2, pady= 2, row= iFila, column= iSubColumna, sticky='')
       iSubColumna+=1
 
-      # ���� Button: Orden x.Abrir ���������������������������������������������������������������������������������������������
+      # ï¿½ï¿½ï¿½ï¿½ Button: Orden x.Abrir ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
       self._ldOrdenes[iElemento]['Abrir']= tk.Button(self._tklfOrdenes, text= 'Abrir', bg= self._sColorGris)
       self._ldOrdenes[iElemento]['Abrir'].grid(padx= 2, pady= 2, row= iFila, column= iSubColumna, sticky='')
       self._ldOrdenes[iElemento]['Abrir'].bind('<ButtonRelease>', self._OrdenAbrir)
       iSubColumna+=1
 
-      # ���� Button: Orden x.Cerrar ��������������������������������������������������������������������������������������������
+      # ï¿½ï¿½ï¿½ï¿½ Button: Orden x.Cerrar ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
       self._ldOrdenes[iElemento]['Cerrar']= tk.Button(self._tklfOrdenes, text= 'Cerrar', bg= self._sColorGris)
       self._ldOrdenes[iElemento]['Cerrar'].grid(padx= 2, pady= 2, row= iFila, column= iSubColumna, sticky='')
       self._ldOrdenes[iElemento]['Cerrar'].bind('<ButtonRelease>', self._OrdenCerrar)
       iSubColumna+=1
     
-      # ���� Preparar la siguiente iteraci�n �����������������������������������������������������������������������������������
+      # ï¿½ï¿½ï¿½ï¿½ Preparar la siguiente iteraciï¿½n ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
       if (iUltCol < iSubColumna) : iUltCol= iSubColumna     
       iElemento+= 1
@@ -329,7 +329,7 @@ class FormPpal:
    
     self._Ordenes_ColorearBotones(False)
 
-    # ---- Bot�n de "Limpiar" --------------------------------------------------------------------------------------------------
+    # ---- Botï¿½n de "Limpiar" --------------------------------------------------------------------------------------------------
 
     iFila+= 1
     self._tkbOrdenes_Limpiar= tk.Button(self._tklfOrdenes, text= 'Limpiar', bg= self._sColorGris, command= self._Orden_LimpiarMensaje)
@@ -349,17 +349,17 @@ class FormPpal:
     
     # ---- Canal serie --------------------------------------------------------------------------------------------------------
 
-    # ���� Label: Canal serie �������������������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Canal serie ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
      
     self._tklCanalSerie= tk.Label(self._tklfEstado, text= 'Canal serie:', bg= self._sColorFondo)
     self._tklCanalSerie.grid(padx= 2, pady= 2, row= 0, column= 0, sticky='e')
 
-    # ���� Label: Configuraci�n del canal serie �������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Configuraciï¿½n del canal serie ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklCSerieCfg= tk.Label(self._tklfEstado, text= '...', bg= self._sColorFondo)
     self._tklCSerieCfg.grid(padx= 2, pady= 2, row= 0, column= 1, sticky='w')
     
-    # ���� Label: Piloto de la Transmisi�n ������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Piloto de la Transmisiï¿½n ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklCSerieTrmF= tk.Label(self._tklfEstado, text= 'Trm:', bg= self._sColorFondo)
     self._tklCSerieTrmF.grid(padx= 2, pady= 2, row= 0, column= 2, sticky='e')
@@ -367,7 +367,7 @@ class FormPpal:
     self._tklCSerieTrmM= tk.Label(self._tklfEstado, text= '.', bg= self._sColorFondo)
     self._tklCSerieTrmM.grid(padx= 2, pady= 2, row= 0, column= 3, sticky='')
     
-    # ���� Label: Piloto de la Recepci�n ��������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Piloto de la Recepciï¿½n ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklCSerieRcpF= tk.Label(self._tklfEstado, text= 'Rcp:', bg= self._sColorFondo)
     self._tklCSerieRcpF.grid(padx= 2, pady= 2, row= 0, column= 4, sticky='e')
@@ -375,9 +375,9 @@ class FormPpal:
     self._tklCSerieRcpM= tk.Label(self._tklfEstado, text= '.', bg= self._sColorFondo)
     self._tklCSerieRcpM.grid(padx= 2, pady= 2, row= 0, column= 5, sticky='')
 
-    # ���� Label: Direcci�n PROCOME �������������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Direcciï¿½n PROCOME ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    self._tklDirProcome= tk.Label(self._tklfEstado, text= 'Dirección PROCOME:', bg= self._sColorFondo)
+    self._tklDirProcome= tk.Label(self._tklfEstado, text= 'DirecciÃ³n PROCOME:', bg= self._sColorFondo)
     self._tklDirProcome.grid(padx= 2, pady= 2, row= 0, column= 6, sticky='e')
 
     self._tklDirProc_Valor= tk.Label(self._tklfEstado, text= '..', bg= self._sColorFondo)
@@ -386,42 +386,42 @@ class FormPpal:
 
     # ---- Equipo -------------------------------------------------------------------------------------------------------------
 
-    # ���� Label: Equipo ������������������������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Equipo ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklEquipo= tk.Label(self._tklfEstado, text= 'Equipo:', bg= self._sColorFondo)
     self._tklEquipo.grid(padx= 2, pady= 2, row= 1, column= 0, sticky='w')
 
-    # ���� Label: Equipo. Valor  ����������������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Equipo. Valor  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklEquipoValor= tk.Label(self._tklfEstado, text= '........', bg= self._sColorFondo)
     self._tklEquipoValor.grid(padx= 2, pady= 2, row= 1, column= 1, sticky='w')
     
-    # ���� Label: N� de medidas �����������������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Nï¿½ de medidas ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklEqNrMed= tk.Label(self._tklfEstado, text= 'Nr. medidas:', bg= self._sColorFondo)
     self._tklEqNrMed.grid(padx= 2, pady= 2, row= 1, column= 2, sticky='')
     
-    # ���� Label: N� de medidas.Valor �����������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Nï¿½ de medidas.Valor ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklEqNrMed_Valor= tk.Label(self._tklfEstado, text= '..', bg= self._sColorFondo)
     self._tklEqNrMed_Valor.grid(padx= 2, pady= 2, row= 1, column= 3, sticky='')
 
-    # ���� Label: N� de estados digitales �������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Nï¿½ de estados digitales ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklEqNrEstD= tk.Label(self._tklfEstado, text= 'Nr. estados dig:', bg= self._sColorFondo)
     self._tklEqNrEstD.grid(padx= 2, pady= 2, row= 1, column= 4, sticky='')
     
-    # ���� Label: N� de estados digitales.Valor �����������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Nï¿½ de estados digitales.Valor ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     self._tklEqNrEstD_Valor= tk.Label(self._tklfEstado, text= '..', bg= self._sColorFondo)
     self._tklEqNrEstD_Valor.grid(padx= 2, pady= 2, row= 1, column= 5, sticky='')
 
-    # ���� Label: Version PROCOME ���������������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Version PROCOME ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     
-    self._tklVersionP= tk.Label(self._tklfEstado, text= 'Versión PROCOME', bg= self._sColorFondo)
+    self._tklVersionP= tk.Label(self._tklfEstado, text= 'VersiÃ³n PROCOME', bg= self._sColorFondo)
     self._tklVersionP.grid(padx= 2, pady= 2, row= 1, column= 6, sticky='')
 
-    # ���� Label: Version PROCOME.Valor ���������������������������������������������������������������������������������������
+    # ï¿½ï¿½ï¿½ï¿½ Label: Version PROCOME.Valor ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     
     self._tklVersP_Valor= tk.Label(self._tklfEstado, text= '...', bg= self._sColorFondo)
     self._tklVersP_Valor.grid(padx= 2, pady= 2, row= 1, column= 7, sticky='')
@@ -439,7 +439,7 @@ class FormPpal:
 
     if (self._bArranqueClase) : return
   
-    # **** Arrancar la comunicaci�n *******************************************************************************************
+    # **** Arrancar la comunicaciï¿½n *******************************************************************************************
     
     if (not self._oMaqEstados.Comunicando()) :
       self._Medidas_BorrarValores()
@@ -451,16 +451,16 @@ class FormPpal:
       self._ProcesarRespuestaMaqEstados(Rta)
       if (self._oMaqEstados.Comunicando()) :
         self._tkbArrancParar['bg']= self._sColorComunicando
-        self._tkbArrancParar['text']= 'Parar la comunicación'
+        self._tkbArrancParar['text']= 'Parar la comunicaciÃ³n'
     
-    # **** Parar la comunicaci�n ***********************************************************************************************
+    # **** Parar la comunicaciï¿½n ***********************************************************************************************
     else :
       self._Ordenes_ColorearBotones(False)
       Rta= self._oMaqEstados.ProcesarEventos('Parar')
       self._ProcesarRespuestaMaqEstados(Rta)
       if (not self._oMaqEstados.Comunicando()) :
         self._tkbArrancParar['bg']= self._sColorNoComunica
-        self._tkbArrancParar['text']= 'Arrancar la comunicación'
+        self._tkbArrancParar['text']= 'Arrancar la comunicaciÃ³n'
 
     return 
 
@@ -539,7 +539,7 @@ class FormPpal:
   # **** FRAME DE ORDENES: EVENTOS Y FUNCIONES
   # ***************************************************************************************************************************
 
-  # **** Pulsado el bot�n de "Abrir" ******************************************************************************************
+  # **** Pulsado el botï¿½n de "Abrir" ******************************************************************************************
 
   def _OrdenAbrir(self, oEvento):
 
@@ -552,14 +552,14 @@ class FormPpal:
         iNrOrden= iIndice
         break
     else :       
-      print('ERROR: No se ha encontrado de que botón es el evento')
+      print('ERROR: No se ha encontrado de que botÃ³n es el evento')
       return      
 
     Rta= self._oMaqEstados.ProcesarEventos('PetOrden', [iNrOrden, 'OFF'])
     self._ProcesarRespuestaMaqEstados(Rta)
     return
 
-  # **** Pulsado el bot�n de "Cerrar" ******************************************************************************************
+  # **** Pulsado el botï¿½n de "Cerrar" ******************************************************************************************
 
   def _OrdenCerrar(self, oEvento):
 
@@ -572,7 +572,7 @@ class FormPpal:
         iNrOrden= iIndice
         break
     else :       
-      print('ERROR: No se ha encontrado de que botón es el evento')
+      print('ERROR: No se ha encontrado de que botÃ³n es el evento')
       return      
 
     Rta= self._oMaqEstados.ProcesarEventos('PetOrden', [iNrOrden, 'ON'])
@@ -615,13 +615,13 @@ class FormPpal:
   # ==== Canal serie
   # ===========================================================================================================================
 
-  # **** Mostrar configuraci�n del canal serie en la barra de estado **********************************************************
+  # **** Mostrar configuraciï¿½n del canal serie en la barra de estado **********************************************************
 
   def _CSerie_MostrarCfg(self, sTxtAux):
     self._tklCSerieCfg['text']= sTxtAux
     pass
 
-  # **** Avanzar el "Piloto de transmisi�n" ***********************************************************************************
+  # **** Avanzar el "Piloto de transmisiï¿½n" ***********************************************************************************
 
   def AvanzarPilotoTrm(self):
     sJuegoCaracteres= '-\\|/'
@@ -630,7 +630,7 @@ class FormPpal:
     self._tklCSerieTrmM['text']= sJuegoCaracteres[iPosic]
     return
     
-  # **** Avanzar el "Piloto de recepci�n" *************************************************************************************
+  # **** Avanzar el "Piloto de recepciï¿½n" *************************************************************************************
 
   def AvanzarPilotoRcp(self):
     sJuegoCaracteres= '-\\|/'
@@ -857,7 +857,7 @@ class FormPpal:
         # Actualizar la pantalla con los nuevos valores
         self._tklDirProc_Valor['text']= str(self._iDirProtocolo)
 
-        messagebox.showinfo('Exito', 'Configuración general actualizada.\nPara aplicar los cambios: Parar -> Arrancar')
+        messagebox.showinfo('Exito', 'ConfiguraciÃ³n general actualizada.\nPara aplicar los cambios: Parar -> Arrancar')
         dVentanaCfgGeneral.destroy()
       except ValueError:
         messagebox.showerror('Error', 'Ingrese valores numericos validos')
@@ -987,10 +987,10 @@ class FormPpal:
 
   
     # -------------------------------------------------------------------------------------------------------------------------
-    # ---- Canal serie. Recepci�n
+    # ---- Canal serie. Recepciï¿½n
     # -------------------------------------------------------------------------------------------------------------------------
     #
-    # Solo se procesa cuando el canal serie est� abierto
+    # Solo se procesa cuando el canal serie estï¿½ abierto
     # Se procesa todo lo recibido hasta el momento
     
     if (self._oCSerie.is_open) :
@@ -1001,7 +1001,7 @@ class FormPpal:
         iRcpCSerie= ord(self._oCSerie.read(1))
         xRta= self._oConstrTramaRcp.ConstruirTrama(iRcpCSerie)
         
-        # **** Si se detecta alg�n error dar un mensaje y despreciar lo procesadoo hasta ahora ********************************
+        # **** Si se detecta algï¿½n error dar un mensaje y despreciar lo procesadoo hasta ahora ********************************
         
         if (type(xRta) == int) :
           if (xRta < 0) :
@@ -1025,11 +1025,11 @@ class FormPpal:
           
           dTramaRcp= PROCOME_AnalizarTramaRcp.AnalizarTrama(lTramaRcp)
           
-          # ==== Trama v�lida (a nivel de la capa de enlace) y con la direcci�n adecuada ======================================
+          # ==== Trama vï¿½lida (a nivel de la capa de enlace) y con la direcciï¿½n adecuada ======================================
 
           if (dTramaRcp['TramaValida'] and (dTramaRcp['Dir'] == self._iDirProtocolo)) :
           
-            # ---- Si es un eco de la transmisi�n no es necesario procesarla --------------------------------------------------
+            # ---- Si es un eco de la transmisiï¿½n no es necesario procesarla --------------------------------------------------
             
             if (dTramaRcp['BitPRM']) :
               # oCSerie.rts= False
@@ -1041,7 +1041,7 @@ class FormPpal:
             
               iASDU= dTramaRcp['TYP']
               
-              # ���� Tiene ASDU= 100 (Medidas y cambios de estado) ������������������������������������������������������������
+              # ï¿½ï¿½ï¿½ï¿½ Tiene ASDU= 100 (Medidas y cambios de estado) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
               
               if (iASDU == 100) :
                 dRta= PROCOME_AnalizarTramaRcp.InterpretarPaquetesSecundario_ASDU_100(lTramaRcp)
@@ -1050,7 +1050,7 @@ class FormPpal:
                 self._ActualizarDatosEquipo(None, len(dRta['Medidas']), None, None)
                 # self._tkWindow.update_idletasks()
             
-              # ���� ASDU 103 (Transmisi�n de estados digitales de control) ���������������������������������������������������
+              # ï¿½ï¿½ï¿½ï¿½ ASDU 103 (Transmisiï¿½n de estados digitales de control) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
               elif (iASDU == 103) :
                 dRta= PROCOME_AnalizarTramaRcp.InterpretarPaquetesSecundario_ASDU_103(lTramaRcp)
@@ -1058,21 +1058,21 @@ class FormPpal:
                 self._ActualizarDatosEquipo(None, None, len(dRta['EstadosDig']), None)
                 # self._tkWindow.update_idletasks()
             
-              # ���� ASDU 5 (Transmisi�n de estados digitales de control) �����������������������������������������������������
+              # ï¿½ï¿½ï¿½ï¿½ ASDU 5 (Transmisiï¿½n de estados digitales de control) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
               elif (iASDU == 5) :
                 dRta= PROCOME_AnalizarTramaRcp.InterpretarPaquetesSecundario_ASDU_5(lTramaRcp)
                 self._ActualizarDatosEquipo(dRta['TxtIdEquipo'], None, None, dRta['VersProcome'])
                 # self._tkWindow.update_idletasks()
 
-              # ���� ASDU 121 (Confirmaci�n de orden) ��������������������������������������������������������������������������
+              # ï¿½ï¿½ï¿½ï¿½ ASDU 121 (Confirmaciï¿½n de orden) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
               elif (iASDU == 121) :
                 dRta= PROCOME_AnalizarTramaRcp.InterpretarPaquetesSecundario_ASDU_121(lTramaRcp)
                 self._Ordenes_MostrarMensaje('Respuesta a Peticion de orden S' + str(dRta['NrOden'] + 1) + ' a ' + dRta['TipoOperacion'] + ': ' + dRta['ResultadoOper'])
                 # self._tkWindow.update_idletasks()
 
-          # ==== Procesar todas las tramas en la m�quina de estados ===========================================================
+          # ==== Procesar todas las tramas en la mï¿½quina de estados ===========================================================
             
           Rta= self._oMaqEstados.ProcesarEventos('RecibidaTrama', lTramaRcp)
           self._ProcesarRespuestaMaqEstados(Rta)
@@ -1139,7 +1139,7 @@ class FormPpal:
           self._ProcesarRespuestaMaqEstados(Rta)
 
   # ===========================================================================================================================
-  # ==== Procesar las respuestas de la m�quina de estados
+  # ==== Procesar las respuestas de la mï¿½quina de estados
   # ===========================================================================================================================
 
   def _ProcesarRespuestaMaqEstados(self, sRespuesta):
@@ -1147,7 +1147,7 @@ class FormPpal:
       print(sRespuesta)
       if (not self._oMaqEstados.Comunicando()) :
         self._tkbArrancParar['bg']= self._sColorNoComunica
-        self._tkbArrancParar['text']= 'Arrancar la comunicaci�n'
+        self._tkbArrancParar['text']= 'Arrancar la comunicaciï¿½n'
 
     return
 
