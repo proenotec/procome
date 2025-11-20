@@ -83,7 +83,7 @@ if __name__ == '__main__' :
   # ==== Inicializaciones
   # ===========================================================================================================================
  
-  print('Arranque de la aplicacion')
+  print('Arranque de la aplicación')
 
   _IncrtTmp(True)
 
@@ -97,9 +97,9 @@ if __name__ == '__main__' :
 
   sRta= g_oFichCfg.LeerDeFichero()
   if (sRta != '') :
-    print('Leer el fichero de configuraci�n:')
+    print('Leer el fichero de configuración:')
     print(sRta)
-    print('- Se arranca con la configuraci�n por defecto')
+    print('- Se arranca con la configuración por defecto')
     
   dFichCfg= g_oFichCfg.Parametros_Get()
   g_iNrMedidas= dFichCfg['Medidas.NrMedidas']

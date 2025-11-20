@@ -139,7 +139,7 @@ def AnalizarTrama(lTrama):
 # *****************************************************************************************************************************
 
 # =============================================================================================================================
-# ==== ASDU 100 (Petición de medidas y cambios de estado)
+# ==== ASDU 100 (Peticiï¿½n de medidas y cambios de estado)
 # =============================================================================================================================
 
 def InterpretarPaquetesSecundario_ASDU_100(lTrama):
@@ -190,7 +190,7 @@ def InterpretarPaquetesSecundario_ASDU_100(lTrama):
 
 
 # =============================================================================================================================
-# ==== ASDU 103 (Transmisión de estados digitales de control) 
+# ==== ASDU 103 (Transmisiï¿½n de estados digitales de control) 
 # =============================================================================================================================
 
 def InterpretarPaquetesSecundario_ASDU_103(lTrama):
@@ -212,9 +212,9 @@ def InterpretarPaquetesSecundario_ASDU_103(lTrama):
   iNrEstadosDig= lAsdu[14] + 256 * lAsdu[15]
   if (len(lAsdu) != (16 + 2 * math.ceil(iNrEstadosDig/8))) : return -4
   
-  # **** Interpretar la información que viene en el ASDU **********************************************************************
+  # **** Interpretar la informaciï¿½n que viene en el ASDU **********************************************************************
   
-  # Hora= lAsdu[7:14] # Se ignora la información de hora
+  # Hora= lAsdu[7:14] # Se ignora la informaciï¿½n de hora
 
   ldEstadosDig=[]
   
@@ -238,7 +238,7 @@ def InterpretarPaquetesSecundario_ASDU_103(lTrama):
 
 
 # =============================================================================================================================
-# ==== ASDU 121 (Confirmación de orden)
+# ==== ASDU 121 (Confirmaciï¿½n de orden)
 # =============================================================================================================================
 #
 # iTipoOperacion:
@@ -260,7 +260,7 @@ def InterpretarPaquetesSecundario_ASDU_121(lTrama):
   
   if (lTrama[PROCOME_General.TRAMALARGA_POSIC_ASDU : PROCOME_General.TRAMALARGA_POSIC_ASDU + 6] != [0x79, 0x01, 0x79, dTrama['Dir'], 0x64, 0x00]) : return -2
   
-  # **** Interpretar la información que viene en el ASDU **********************************************************************
+  # **** Interpretar la informaciï¿½n que viene en el ASDU **********************************************************************
 
   iPosic= PROCOME_General.TRAMALARGA_POSIC_ASDU + 6
   iNrOden= lTrama[iPosic] + 256 * lTrama[iPosic + 1]
@@ -273,7 +273,7 @@ def InterpretarPaquetesSecundario_ASDU_121(lTrama):
   elif (iTipoOperacion == 2) :
     sTipoOperacion= 'ON'
   else :
-    sTipoOperacion= 'ERROR: Tipo de operación no contemplado'
+    sTipoOperacion= 'ERROR: Tipo de operaciÃ³n no contemplado'
 
   iResultadoOper= lTrama[iPosic]
   if (iResultadoOper == 0) :
@@ -283,13 +283,13 @@ def InterpretarPaquetesSecundario_ASDU_121(lTrama):
   elif (iResultadoOper == 20) :
     sResultadoOper= 'Nr. de orden incorrecto'
   elif (iResultadoOper == 30) :
-    sResultadoOper= 'El elemento ya está en la posición deseada'
+    sResultadoOper= 'El elemento ya estÃ¡ en la posiciÃ³n deseada'
   elif (iResultadoOper == 40) :
     sResultadoOper= 'No se puede ejecutar la orden debido a un bloqueo interno'
   elif (iResultadoOper == 100) :
     sResultadoOper= 'Error indefinido'
   else :
-    sResultadoOper= 'Error, opción no contemplada'
+    sResultadoOper= 'Error, opciÃ³n no contemplada'
 
   # print('iNrOden= ' + str(iNrOden))
   # print('iTipoOperacion= ' + sTipoOperacion)
@@ -299,7 +299,7 @@ def InterpretarPaquetesSecundario_ASDU_121(lTrama):
 
 
 # =============================================================================================================================
-# ==== ASDU 5 (Mensaje de identificación del tipo de equipo)
+# ==== ASDU 5 (Mensaje de identificaciï¿½n del tipo de equipo)
 # =============================================================================================================================
 
 def InterpretarPaquetesSecundario_ASDU_5(lTrama):
@@ -315,10 +315,10 @@ def InterpretarPaquetesSecundario_ASDU_5(lTrama):
 
   lAsdu= dTrama['ASDU']
   if (lAsdu[:2] != [0x05, 0x81]) : return -2
-  # El lAsdu[:2] es la COT, pero aunque hay varios valores válidos no nos interesan
+  # El lAsdu[:2] es la COT, pero aunque hay varios valores vï¿½lidos no nos interesan
   if (lAsdu[3:5] != [dTrama['Dir'], 0xFE]) : return -3
 
-  # **** Interpretar la información que viene en el ASDU **********************************************************************
+  # **** Interpretar la informaciï¿½n que viene en el ASDU **********************************************************************
 
   iTipoMensaje= lAsdu[5]
   if (iTipoMensaje == 2) :
@@ -330,7 +330,7 @@ def InterpretarPaquetesSecundario_ASDU_5(lTrama):
   elif (iTipoMensaje == 5) :
     sTipoMensaje= 'Encendido (power on)'
   else :
-    sTipoMensaje= 'Con código <' + str(iTipoMensaje) + '>'
+    sTipoMensaje= 'Con cÃ³digo <' + str(iTipoMensaje) + '>'
   sVersProcome= str(lAsdu[6] >> 4) + '.' + str(lAsdu[6] & 0xF)
   sTxtIdEquipo= ''
   for iIndice in range(7, 15) : sTxtIdEquipo= sTxtIdEquipo + chr(lAsdu[iIndice])
