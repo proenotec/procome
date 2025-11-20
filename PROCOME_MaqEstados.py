@@ -188,7 +188,7 @@ class PROCOME_MaqEstados:
       
         if (sEstado not in self._tEstadosEnlace) : 
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
   
   
         # 
@@ -202,7 +202,7 @@ class PROCOME_MaqEstados:
           if (sEvento == 'Arrancar') :
             if (self._oCanalSerie.is_open) :
               self._CancelarLaComunicacion()
-              return 'ERROR DE SOFTWARE: Al intentar abrir el canal serie <'  + sNombreCanalserie + '>, ya estÃ¡ abierto por este programa'
+              return 'ERROR DE SOFTWARE: Al intentar abrir el canal serie <'  + sNombreCanalserie + '>, ya estÃÂ¡ abierto por este programa'
             else :
               try :
                 self._oCanalSerie.open()
@@ -343,7 +343,7 @@ class PROCOME_MaqEstados:
 
         else :  
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -354,7 +354,7 @@ class PROCOME_MaqEstados:
 
         if (sEstado not in self._tEstadosInicializacion) : 
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
 
 
         # 
@@ -417,7 +417,7 @@ class PROCOME_MaqEstados:
 
         else :  
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -428,7 +428,7 @@ class PROCOME_MaqEstados:
       
         if (sEstado not in self._tEstadosBucle) : 
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
 
 
         # 
@@ -611,16 +611,16 @@ class PROCOME_MaqEstados:
             self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
             self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
             self._TransmitirTrama()
-            sTxtAux= 'Enviada orden: Orden S' + str(self._DatosOrden[0] + 1) + ', operaciÃ³n ' + self._DatosOrden[1]
+            sTxtAux= 'Enviada orden: Orden S' + str(self._DatosOrden[0] + 1) + ', operaciÃÂ³n ' + self._DatosOrden[1]
             self._oFormPpal._Ordenes_MostrarMensaje(sTxtAux)
             #
             if (self._bVerMensDbg_TipoMensTrm) :
-              sTexto= self._lEstado[0] + ': Transmitido un mensaje de "PeticiÃ³n de orden" para dar una orden de '
+              sTexto= self._lEstado[0] + ': Transmitido un mensaje de "PeticiÃÂ³n de orden" para dar una orden de '
               if (self._lTramaTrm[-3] == 1) :
                 sTexto+= 'Abrir'
               else : 
                 sTexto+= 'Cerrar'
-              print(sTexto + ' al relÃ© con NrOrden ' + str(self._lTramaTrm[-5]))
+              print(sTexto + ' al relÃÂ© con NrOrden ' + str(self._lTramaTrm[-5]))
             if (self._bVerMensDbg_MensajeTrm)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaTrm)
             self._sEstadoCom= 'EspRcp'
             sEvento= 'Procesado'
@@ -682,7 +682,7 @@ class PROCOME_MaqEstados:
 
         else :  
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -692,7 +692,7 @@ class PROCOME_MaqEstados:
       elif (sSuperEstado == 'Control') :
         if (sEstado not in self._tEstadosControl) : 
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
 
         if (sEstado == 'Parar') :
           self._CancelarLaComunicacion()
@@ -711,7 +711,7 @@ class PROCOME_MaqEstados:
 
         else :  
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -720,7 +720,7 @@ class PROCOME_MaqEstados:
       
       else :  
         self._CancelarLaComunicacion()
-        return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃºn no tiene programa asociado'
+        return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -950,7 +950,7 @@ class PROCOME_MaqEstados:
           self._bBitFCB= not self._bBitFCB
           #
           if (self._bVerMensDbg_TipoMensRcp) : 
-            sTexto= 'Recibido un mensaje de "TransmisiÃ³n de medidas y cambios digitales de control" con ACD= '
+            sTexto= 'Recibido un mensaje de "TransmisiÃÂ³n de medidas y cambios digitales de control" con ACD= '
             sTexto+= '1' if (bBitACD) else '0'
             print(sTexto)
           if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
@@ -1029,7 +1029,7 @@ class PROCOME_MaqEstados:
           self._bBitFCB= not self._bBitFCB
           #
           if (self._bVerMensDbg_TipoMensRcp) : 
-            sTexto= 'Recibido un mensaje de "TransmisiÃ³n de estados digitales de control" con ACD= '
+            sTexto= 'Recibido un mensaje de "TransmisiÃÂ³n de estados digitales de control" con ACD= '
             sTexto+= '1' if (bBitACD) else '0'
             print(sTexto)
           if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)

@@ -273,7 +273,7 @@ def InterpretarPaquetesSecundario_ASDU_121(lTrama):
   elif (iTipoOperacion == 2) :
     sTipoOperacion= 'ON'
   else :
-    sTipoOperacion= 'ERROR: Tipo de operaciÃ³n no contemplado'
+    sTipoOperacion= 'ERROR: Tipo de operaciÃÂ³n no contemplado'
 
   iResultadoOper= lTrama[iPosic]
   if (iResultadoOper == 0) :
@@ -283,13 +283,13 @@ def InterpretarPaquetesSecundario_ASDU_121(lTrama):
   elif (iResultadoOper == 20) :
     sResultadoOper= 'Nr. de orden incorrecto'
   elif (iResultadoOper == 30) :
-    sResultadoOper= 'El elemento ya estÃ¡ en la posiciÃ³n deseada'
+    sResultadoOper= 'El elemento ya estÃÂ¡ en la posiciÃÂ³n deseada'
   elif (iResultadoOper == 40) :
     sResultadoOper= 'No se puede ejecutar la orden debido a un bloqueo interno'
   elif (iResultadoOper == 100) :
     sResultadoOper= 'Error indefinido'
   else :
-    sResultadoOper= 'Error, opciÃ³n no contemplada'
+    sResultadoOper= 'Error, opciÃÂ³n no contemplada'
 
   # print('iNrOden= ' + str(iNrOden))
   # print('iTipoOperacion= ' + sTipoOperacion)
@@ -330,7 +330,7 @@ def InterpretarPaquetesSecundario_ASDU_5(lTrama):
   elif (iTipoMensaje == 5) :
     sTipoMensaje= 'Encendido (power on)'
   else :
-    sTipoMensaje= 'Con cÃ³digo <' + str(iTipoMensaje) + '>'
+    sTipoMensaje= 'Con cÃÂ³digo <' + str(iTipoMensaje) + '>'
   sVersProcome= str(lAsdu[6] >> 4) + '.' + str(lAsdu[6] & 0xF)
   sTxtIdEquipo= ''
   for iIndice in range(7, 15) : sTxtIdEquipo= sTxtIdEquipo + chr(lAsdu[iIndice])
