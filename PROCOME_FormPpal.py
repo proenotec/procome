@@ -19,6 +19,30 @@ import FichConfig
 
 
 # #############################################################################################################################
+# #### Clase para capturar la salida de consola
+# #############################################################################################################################
+
+class ConsoleCapture:
+  """Clase que captura la salida de print() y la redirige a una función callback"""
+
+  def __init__(self, callback=None):
+    self.callback = callback
+    self.original_stdout = sys.stdout
+
+  def write(self, text):
+    if text.strip():  # Solo si no es solo espacios en blanco
+      if self.callback:
+        self.callback(text)
+    self.original_stdout.write(text)
+
+  def flush(self):
+    self.original_stdout.flush()
+
+  def isatty(self):
+    return False
+
+
+# #############################################################################################################################
 # #### Clase FormPpal
 # #############################################################################################################################
 #
@@ -78,6 +102,12 @@ class FormPpal:
                  }
     self._oConstrTramaRcp= None
     self._oMaqEstados= None
+
+    # **** Variables para la ventana de consola *******************************************************************************
+
+    self._tkConsoleWindow= None
+    self._tkConsoleText= None
+    self._oConsoleCapture= None
 
     # **** Crear la ventana grafica *******************************************************************************************
     #
@@ -183,6 +213,11 @@ class FormPpal:
     self._tkbArrancParar= tk.Button(self._tkfrFramePpal, text= 'Arrancar la comunicación', bg= self._sColorNoComunica)
     self._tkbArrancParar.grid(padx= 2, pady= 2, row= 0, column= 0, sticky='w')
     self._tkbArrancParar.bind('<ButtonRelease>', self._ArrancarPararComunicacion)
+
+    # [101] ==== Botn Ver Consola ====================================================================================================
+
+    self._tkbVerConsola= tk.Button(self._tkfrFramePpal, text= 'Ver Consola', bg= '#FFE4B5', command= self._AbrirVentanaConsola)
+    self._tkbVerConsola.grid(padx= 2, pady= 2, row= 0, column= 1, sticky='w')
 
 
     # [110] ==== Frame: Medidas ==========================================================
@@ -1150,5 +1185,85 @@ class FormPpal:
         self._tkbArrancParar['text']= 'Arrancar la comunicación'
 
     return
+
+  # ===========================================================================================================================
+  # ==== Ventana de Consola
+  # ===========================================================================================================================
+
+  def _AbrirVentanaConsola(self):
+    """Abre o trae al frente la ventana de consola"""
+
+    # Si la ventana ya existe, traerla al frente
+    if self._tkConsoleWindow is not None:
+      self._tkConsoleWindow.lift()
+      self._tkConsoleWindow.focus()
+      return
+
+    # Crear la nueva ventana
+    self._tkConsoleWindow = tk.Toplevel(self._tkWindow)
+    self._tkConsoleWindow.title('Consola')
+    self._tkConsoleWindow.geometry('800x400')
+
+    # Crear el widget Text para mostrar la salida
+    frm_container = tk.Frame(self._tkConsoleWindow)
+    frm_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+    # Frame para el texto y la barra de desplazamiento
+    frm_text = tk.Frame(frm_container)
+    frm_text.pack(fill=tk.BOTH, expand=True)
+
+    # Barra de desplazamiento vertical
+    scrollbar = tk.Scrollbar(frm_text)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    # Widget Text
+    self._tkConsoleText = tk.Text(frm_text, wrap=tk.WORD, yscrollcommand=scrollbar.set, bg='black', fg='white', font=('Courier', 9))
+    self._tkConsoleText.pack(fill=tk.BOTH, expand=True)
+    scrollbar.config(command=self._tkConsoleText.yview)
+
+    # Frame de botones
+    frm_buttons = tk.Frame(frm_container)
+    frm_buttons.pack(fill=tk.X, pady=(5, 0))
+
+    btn_limpiar = tk.Button(frm_buttons, text='Limpiar', command=self._LimpiarConsola, bg='#FFB6C1')
+    btn_limpiar.pack(side=tk.LEFT, padx=5)
+
+    btn_cerrar = tk.Button(frm_buttons, text='Cerrar', command=self._CerrarConsola, bg='#FFB6C1')
+    btn_cerrar.pack(side=tk.LEFT, padx=5)
+
+    # Capturar la salida de print
+    self._oConsoleCapture = ConsoleCapture(callback=self._EscribirEnConsola)
+    sys.stdout = self._oConsoleCapture
+
+    # Manejar el cierre de la ventana
+    self._tkConsoleWindow.protocol('WM_DELETE_WINDOW', self._CerrarConsola)
+
+    # Escribir mensaje inicial
+    self._EscribirEnConsola('Consola abierta\n')
+
+  def _EscribirEnConsola(self, texto):
+    """Escribe texto en la ventana de consola"""
+    if self._tkConsoleText is not None:
+      self._tkConsoleText.insert(tk.END, texto)
+      # Auto-scroll al final
+      self._tkConsoleText.see(tk.END)
+      self._tkConsoleText.update()
+
+  def _LimpiarConsola(self):
+    """Limpia el contenido de la consola"""
+    if self._tkConsoleText is not None:
+      self._tkConsoleText.delete('1.0', tk.END)
+
+  def _CerrarConsola(self):
+    """Cierra la ventana de consola y restaura stdout"""
+    if self._tkConsoleWindow is not None:
+      self._tkConsoleWindow.destroy()
+      self._tkConsoleWindow = None
+      self._tkConsoleText = None
+
+    # Restaurar stdout
+    if self._oConsoleCapture is not None:
+      sys.stdout = self._oConsoleCapture.original_stdout
+      self._oConsoleCapture = None
 
 # #############################################################################################################################
