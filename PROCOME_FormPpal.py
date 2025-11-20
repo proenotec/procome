@@ -158,12 +158,12 @@ class FormPpal:
     # [ 12] --- Barra de menus: Menu "Configuración" -----------------------------------------------
     #
     self._tkmbMenuConfig= tk.Menu(self._tkmbBarraDeMenus)
-    self._tkmbBarraDeMenus.add_cascade(menu= self._tkmbMenuConfig, label= 'ConfiguraciÃÂ³n')
+    self._tkmbBarraDeMenus.add_cascade(menu= self._tkmbMenuConfig, label= 'Configuración')
     self._tkmbMenuConfig.add_command(label= 'Puerto serie', command= self._MenuCfgPuertoSerie)
-    self._tkmbMenuConfig.add_command(label= 'ConfiguraciÃÂ³n general', command= self._MenuCfgGeneral)
+    self._tkmbMenuConfig.add_command(label= 'Configuración general', command= self._MenuCfgGeneral)
     self._tkmbMenuConfig.add_separator()
-    self._tkmbMenuConfig.add_command(label= 'Guardar configuraciÃÂ³n', command= self._MenuCfgGuardar)
-    self._tkmbMenuConfig.add_command(label= 'Cargar configuraciÃÂ³n', command= self._MenuCfgCargar)
+    self._tkmbMenuConfig.add_command(label= 'Guardar configuración', command= self._MenuCfgGuardar)
+    self._tkmbMenuConfig.add_command(label= 'Cargar configuración', command= self._MenuCfgCargar)
 
 
   # ===========================================================================================================================
@@ -180,7 +180,7 @@ class FormPpal:
     
     # [100] ==== Botn de arranque/Parada =====================================================================================
 
-    self._tkbArrancParar= tk.Button(self._tkfrFramePpal, text= 'Arrancar la comunicaciÃÂ³n', bg= self._sColorNoComunica)
+    self._tkbArrancParar= tk.Button(self._tkfrFramePpal, text= 'Arrancar la comunicación', bg= self._sColorNoComunica)
     self._tkbArrancParar.grid(padx= 2, pady= 2, row= 0, column= 0, sticky='w')
     self._tkbArrancParar.bind('<ButtonRelease>', self._ArrancarPararComunicacion)
 
@@ -377,7 +377,7 @@ class FormPpal:
 
     #  Label: Direccin PROCOME 
 
-    self._tklDirProcome= tk.Label(self._tklfEstado, text= 'DirecciÃÂ³n PROCOME:', bg= self._sColorFondo)
+    self._tklDirProcome= tk.Label(self._tklfEstado, text= 'Dirección PROCOME:', bg= self._sColorFondo)
     self._tklDirProcome.grid(padx= 2, pady= 2, row= 0, column= 6, sticky='e')
 
     self._tklDirProc_Valor= tk.Label(self._tklfEstado, text= '..', bg= self._sColorFondo)
@@ -418,7 +418,7 @@ class FormPpal:
 
     #  Label: Version PROCOME 
     
-    self._tklVersionP= tk.Label(self._tklfEstado, text= 'VersiÃÂ³n PROCOME', bg= self._sColorFondo)
+    self._tklVersionP= tk.Label(self._tklfEstado, text= 'Versión PROCOME', bg= self._sColorFondo)
     self._tklVersionP.grid(padx= 2, pady= 2, row= 1, column= 6, sticky='')
 
     #  Label: Version PROCOME.Valor 
@@ -451,7 +451,7 @@ class FormPpal:
       self._ProcesarRespuestaMaqEstados(Rta)
       if (self._oMaqEstados.Comunicando()) :
         self._tkbArrancParar['bg']= self._sColorComunicando
-        self._tkbArrancParar['text']= 'Parar la comunicaciÃÂ³n'
+        self._tkbArrancParar['text']= 'Parar la comunicación'
     
     # **** Parar la comunicación ***********************************************************************************************
     else :
@@ -460,7 +460,7 @@ class FormPpal:
       self._ProcesarRespuestaMaqEstados(Rta)
       if (not self._oMaqEstados.Comunicando()) :
         self._tkbArrancParar['bg']= self._sColorNoComunica
-        self._tkbArrancParar['text']= 'Arrancar la comunicaciÃÂ³n'
+        self._tkbArrancParar['text']= 'Arrancar la comunicación'
 
     return 
 
@@ -552,7 +552,7 @@ class FormPpal:
         iNrOrden= iIndice
         break
     else :       
-      print('ERROR: No se ha encontrado de que botÃÂ³n es el evento')
+      print('ERROR: No se ha encontrado de que botón es el evento')
       return      
 
     Rta= self._oMaqEstados.ProcesarEventos('PetOrden', [iNrOrden, 'OFF'])
@@ -572,7 +572,7 @@ class FormPpal:
         iNrOrden= iIndice
         break
     else :       
-      print('ERROR: No se ha encontrado de que botÃÂ³n es el evento')
+      print('ERROR: No se ha encontrado de que botón es el evento')
       return      
 
     Rta= self._oMaqEstados.ProcesarEventos('PetOrden', [iNrOrden, 'ON'])
