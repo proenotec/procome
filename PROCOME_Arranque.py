@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: cp1252 -*-
 
 # #############################################################################################################################
@@ -64,7 +65,7 @@ def ImprimirTrama_Hex(Titulo, Trama):
   print(sSalida)  
   return
 
-# **** Salir de la aplicación cerrando todo ***********************************************************************************
+# **** Salir de la aplicaciï¿½n cerrando todo ***********************************************************************************
 
 def Salir(sMensaje):
   if (sMensaje != '') : print(sMensaje)
@@ -92,13 +93,13 @@ if __name__ == '__main__' :
   g_oFichCfg= FichConfig.FichConfig()			# Crear el objeto y cargar los valores por defecto
   
 
-  # **** Cargar la configuración del fichero de configuración *****************************************************************
+  # **** Cargar la configuraciï¿½n del fichero de configuraciï¿½n *****************************************************************
 
   sRta= g_oFichCfg.LeerDeFichero()
   if (sRta != '') :
-    print('Leer el fichero de configuración:')
+    print('Leer el fichero de configuraciï¿½n:')
     print(sRta)
-    print('- Se arranca con la configuración por defecto')
+    print('- Se arranca con la configuraciï¿½n por defecto')
     
   dFichCfg= g_oFichCfg.Parametros_Get()
   g_iNrMedidas= dFichCfg['Medidas.NrMedidas']
@@ -107,17 +108,17 @@ if __name__ == '__main__' :
   g_iDirProtocolo= dFichCfg['Protocolo.DirRemota']
   
 
-  # **** Crear el objeto del canal serie y configurarlo. Ya se abrirá posteriormente *******************************************
+  # **** Crear el objeto del canal serie y configurarlo. Ya se abrirï¿½ posteriormente *******************************************
 
   # ==== Crear el objeto =======================================================================================================
 
   g_oCSerie= serial.Serial()
 
-  # ==== Traese la configuración por defecto, para partir de ella ==============================================================
+  # ==== Traese la configuraciï¿½n por defecto, para partir de ella ==============================================================
 
   dCSerie_Parametros= g_oCSerie.get_settings()
 
-  # ==== Configurar los parámetros antes de intentar arrancar el puerto ========================================================
+  # ==== Configurar los parï¿½metros antes de intentar arrancar el puerto ========================================================
 
   dCSerie_Parametros['baudrate']= dFichCfg['PuertoSerie.Baudios']
   dCSerie_Parametros['bytesize']= dFichCfg['PuertoSerie.BitsDatos']
@@ -126,9 +127,9 @@ if __name__ == '__main__' :
   dCSerie_Parametros['xonxoff']=  False
   dCSerie_Parametros['rtscts']=   False
   dCSerie_Parametros['dsrdtr']=   False
-  dCSerie_Parametros['timeout']=  0              #  - No se espera si no hay ningún caracter en el buffer de recepción
-  dCSerie_Parametros['write_timeout']=  0        #  - No se espera a que se transmita todo lo que hay en el buffer de transmisión
-  dCSerie_Parametros['inter_byte_timeout']= None #  - Timeout entre caracteres consecutivos en recepción desactivado
+  dCSerie_Parametros['timeout']=  0              #  - No se espera si no hay ningï¿½n caracter en el buffer de recepciï¿½n
+  dCSerie_Parametros['write_timeout']=  0        #  - No se espera a que se transmita todo lo que hay en el buffer de transmisiï¿½n
+  dCSerie_Parametros['inter_byte_timeout']= None #  - Timeout entre caracteres consecutivos en recepciï¿½n desactivado
   try :                                          # Cargar los parametros modificados
     g_oCSerie.apply_settings(dCSerie_Parametros)
   except :
@@ -141,7 +142,7 @@ if __name__ == '__main__' :
 
   # **** Crear y abrir el formulario principal (solo hay este) *****************************************************************
 
-  g_oFormPpal= PROCOME_FormPpal.FormPpal(g_iNrMedidas, g_iNrEstadosDig, g_iNrOrdenes, g_iDirProtocolo, g_oCSerie)
+  g_oFormPpal= PROCOME_FormPpal.FormPpal(g_iNrMedidas, g_iNrEstadosDig, g_iNrOrdenes, g_iDirProtocolo, g_oCSerie, g_oFichCfg)
   if (g_oFormPpal is None) :  Salir('ERROR: Al intentar abrir el formulario principal')
 
 # #############################################################################################################################

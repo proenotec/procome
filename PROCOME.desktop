@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=PROCOME
+Comment=Programa de Control Modular por Electrónica
+Exec=/home/manuel/Temporal/procome/procome
+Icon=dialog-information
+Terminal=false
+Categories=Utility;Electronics;
+StartupNotify=true

@@ -1,0 +1,44 @@
+==============================================
+INSTRUCCIONES DE EJECUCIÓN DE PROCOME
+==============================================
+
+Después de los cambios realizados, PROCOME puede ejecutarse de varias formas:
+
+1. DIRECTAMENTE DESDE EL SCRIPT PYTHON (recomendado):
+   
+   ./PROCOME_Arranque.py
+
+   O desde cualquier ubicación:
+   
+   /home/manuel/Temporal/procome/PROCOME_Arranque.py
+
+2. USANDO EL SCRIPT WRAPPER:
+   
+   ./procome
+   
+   O desde cualquier ubicación:
+   
+   /home/manuel/Temporal/procome/procome
+
+3. TRADICIONAL (con python3):
+   
+   python3 PROCOME_Arranque.py
+
+4. DESDE EL MENÚ DE APLICACIONES (opcional):
+   
+   Copiar PROCOME.desktop a ~/.local/share/applications/ o /usr/share/applications/
+   
+   sudo cp PROCOME.desktop /usr/share/applications/
+   
+   Luego buscar "PROCOME" en el menú de aplicaciones.
+
+CAMBIOS REALIZADOS:
+
+- Agregado shebang (#!/usr/bin/env python3) a PROCOME_Arranque.py
+- Marcado PROCOME_Arranque.py como ejecutable (chmod +x)
+- Creado script wrapper "procome" para facilitar la ejecución
+- Creado archivo PROCOME.desktop para integración en el escritorio
+
+Los scripts son independientes del directorio desde el que se ejecuten.
+
+==============================================
