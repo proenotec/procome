@@ -1,0 +1,4 @@
+# Dependencias de PROCOME
+#
+# pyserial: Librería para comunicación con puertos serie
+pyserial>=3.5
