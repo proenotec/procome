@@ -712,8 +712,8 @@ class FormPpal:
 
     # **** Obtener valores actuales ****
 
-    dCfgActual= self._oCSerie.__dict__.copy()
-    sPuertoActual= dCfgActual['port']
+    dCfgActual= self._oCSerie.get_settings()
+    sPuertoActual= self._oCSerie.port if self._oCSerie.port else ''
     iBaudiosActual= dCfgActual['baudrate']
     sBitsActual= str(dCfgActual['bytesize'])
     sParidadActual= dCfgActual['parity']

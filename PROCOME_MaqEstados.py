@@ -188,7 +188,7 @@ class PROCOME_MaqEstados:
       
         if (sEstado not in self._tEstadosEnlace) : 
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
   
   
         # 
@@ -202,13 +202,13 @@ class PROCOME_MaqEstados:
           if (sEvento == 'Arrancar') :
             if (self._oCanalSerie.is_open) :
               self._CancelarLaComunicacion()
-              return 'ERROR DE SOFTWARE: Al intentar abrir el canal serie <'  + sNombreCanalserie + '>, ya estÃÂ¡ abierto por este programa'
+              return 'ERROR DE SOFTWARE: Al intentar abrir el canal serie <'  + sNombreCanalserie + '>, ya está abierto por este programa'
             else :
               try :
                 self._oCanalSerie.open()
               except :
                 self._CancelarLaComunicacion()
-                return 'ERROR: Al intentar abrir el canal serie <'  + self._oCanalSerie.port + '>. Puede ser que ese canal serie no exista o que est ocupado'
+                return 'ERROR: Al intentar abrir el canal serie <'  + self._oCanalSerie.port + '>. Puede ser que ese canal serie no exista o que esta ocupado'
                 #
             self._oConstrTramaRcp.Reset()           # Borrar lo que haya en el buffer de las tramas de recepcion
             self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
@@ -343,7 +343,7 @@ class PROCOME_MaqEstados:
 
         else :  
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -354,7 +354,7 @@ class PROCOME_MaqEstados:
 
         if (sEstado not in self._tEstadosInicializacion) : 
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
 
 
         # 
@@ -417,7 +417,7 @@ class PROCOME_MaqEstados:
 
         else :  
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -428,7 +428,7 @@ class PROCOME_MaqEstados:
       
         if (sEstado not in self._tEstadosBucle) : 
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
 
 
         # 
@@ -611,16 +611,16 @@ class PROCOME_MaqEstados:
             self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
             self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
             self._TransmitirTrama()
-            sTxtAux= 'Enviada orden: Orden S' + str(self._DatosOrden[0] + 1) + ', operaciÃÂ³n ' + self._DatosOrden[1]
+            sTxtAux= 'Enviada orden: Orden S' + str(self._DatosOrden[0] + 1) + ', operación ' + self._DatosOrden[1]
             self._oFormPpal._Ordenes_MostrarMensaje(sTxtAux)
             #
             if (self._bVerMensDbg_TipoMensTrm) :
-              sTexto= self._lEstado[0] + ': Transmitido un mensaje de "PeticiÃÂ³n de orden" para dar una orden de '
+              sTexto= self._lEstado[0] + ': Transmitido un mensaje de "Petición de orden" para dar una orden de '
               if (self._lTramaTrm[-3] == 1) :
                 sTexto+= 'Abrir'
               else : 
                 sTexto+= 'Cerrar'
-              print(sTexto + ' al relÃÂ© con NrOrden ' + str(self._lTramaTrm[-5]))
+              print(sTexto + ' al relé con NrOrden ' + str(self._lTramaTrm[-5]))
             if (self._bVerMensDbg_MensajeTrm)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaTrm)
             self._sEstadoCom= 'EspRcp'
             sEvento= 'Procesado'
@@ -682,7 +682,7 @@ class PROCOME_MaqEstados:
 
         else :  
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -692,7 +692,7 @@ class PROCOME_MaqEstados:
       elif (sSuperEstado == 'Control') :
         if (sEstado not in self._tEstadosControl) : 
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
 
         if (sEstado == 'Parar') :
           self._CancelarLaComunicacion()
@@ -711,7 +711,7 @@ class PROCOME_MaqEstados:
 
         else :  
           self._CancelarLaComunicacion()
-          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+          return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -720,7 +720,7 @@ class PROCOME_MaqEstados:
       
       else :  
         self._CancelarLaComunicacion()
-        return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aÃÂºn no tiene programa asociado'
+        return 'ERROR DE SOFTWARE: El Estado <' + self._lEstado[0] + '.' + self._lEstado[1] + '> no existe o aún no tiene programa asociado'
 
 
       # -----------------------------------------------------------------------------------------------------------------------
@@ -899,12 +899,22 @@ class PROCOME_MaqEstados:
         return 'Procesado'                    # De momento no hacer nada, esperar al Timeout
           
       # ==== Evento= Timeout de recepcin ===============================================================================
-          
+
       elif (sEvento == 'TimeoutRcp') :
         return self._Reintentar()
 
+      # ==== Evento= Timeout de sincronizacion =================================================================================
+      # Si llega el timeout de sincronizacion mientras esperamos respuesta, priorizar la sincronizacion
+
+      elif (sEvento == 'TimeoutSincr') :
+        self._dTemp['TmpRcp_seg']= 0  # Cancelar el timeout de recepcion
+        self._dTemp['TmpSincr_seg']= self._K_fTmoSincrPeriodica_seg
+        self._lEstado= ['Bucle', 'Sincronizacion']
+        self._sEstadoCom= 'PrepTrm'
+        return 'ProcesarDeNuevo'
+
     # **** Resto de casos *****************************************************************************************************
-    
+
     return sEvento
 
 
@@ -950,7 +960,7 @@ class PROCOME_MaqEstados:
           self._bBitFCB= not self._bBitFCB
           #
           if (self._bVerMensDbg_TipoMensRcp) : 
-            sTexto= 'Recibido un mensaje de "TransmisiÃÂ³n de medidas y cambios digitales de control" con ACD= '
+            sTexto= 'Recibido un mensaje de "Transmisión de medidas y cambios digitales de control" con ACD= '
             sTexto+= '1' if (bBitACD) else '0'
             print(sTexto)
           if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
@@ -978,12 +988,22 @@ class PROCOME_MaqEstados:
         return 'Procesado'                         # De momento no hacer nada, esperar al Timeout
           
       # ==== Evento= Timeout de recepcin =======================================================================================
-          
+
       elif (sEvento == 'TimeoutRcp') :
         return self._Reintentar()
 
+      # ==== Evento= Timeout de sincronizacion =================================================================================
+      # Si llega el timeout de sincronizacion mientras esperamos respuesta, priorizar la sincronizacion
+
+      elif (sEvento == 'TimeoutSincr') :
+        self._dTemp['TmpRcp_seg']= 0  # Cancelar el timeout de recepcion
+        self._dTemp['TmpSincr_seg']= self._K_fTmoSincrPeriodica_seg
+        self._lEstado= ['Bucle', 'Sincronizacion']
+        self._sEstadoCom= 'PrepTrm'
+        return 'ProcesarDeNuevo'
+
     # **** Resto de casos *****************************************************************************************************
-    
+
     return sEvento
 
 
@@ -1029,7 +1049,7 @@ class PROCOME_MaqEstados:
           self._bBitFCB= not self._bBitFCB
           #
           if (self._bVerMensDbg_TipoMensRcp) : 
-            sTexto= 'Recibido un mensaje de "TransmisiÃÂ³n de estados digitales de control" con ACD= '
+            sTexto= 'Recibido un mensaje de "Transmisión de estados digitales de control" con ACD= '
             sTexto+= '1' if (bBitACD) else '0'
             print(sTexto)
           if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
@@ -1057,12 +1077,22 @@ class PROCOME_MaqEstados:
         return 'Procesado'                    # De momento no hacer nada, esperar al Timeout
           
       # ==== Evento= Timeout de recepcin =====================================================================================
-          
+
       elif (sEvento == 'TimeoutRcp') :
         return self._Reintentar()
 
+      # ==== Evento= Timeout de sincronizacion =================================================================================
+      # Si llega el timeout de sincronizacion mientras esperamos respuesta, priorizar la sincronizacion
+
+      elif (sEvento == 'TimeoutSincr') :
+        self._dTemp['TmpRcp_seg']= 0  # Cancelar el timeout de recepcion
+        self._dTemp['TmpSincr_seg']= self._K_fTmoSincrPeriodica_seg
+        self._lEstado= ['Bucle', 'Sincronizacion']
+        self._sEstadoCom= 'PrepTrm'
+        return 'ProcesarDeNuevo'
+
     # **** Resto de casos *****************************************************************************************************
-    
+
     return sEvento
 
 
@@ -1117,6 +1147,18 @@ class PROCOME_MaqEstados:
 
   def EstadoActual(self):
     return self._lEstado
+
+
+  # ===========================================================================================================================
+  # ==== Actualizar la dirección PROCOME
+  # ===========================================================================================================================
+
+  def ActualizarDireccion(self, iNuevaDireccion):
+    """Actualiza la dirección PROCOME del dispositivo remoto"""
+    if (PROCOME_General.PROCOME_DIR_MIN <= iNuevaDireccion <= PROCOME_General.PROCOME_DIR_MAX):
+      self._iDir = iNuevaDireccion
+      return True
+    return False
 
 
   # ===========================================================================================================================
