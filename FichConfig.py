@@ -38,12 +38,16 @@ class FichConfig:
     self._dParametros= { 'Medidas.NrMedidas'         : 35,
                          'EstadosDigitales.NrEstDig' : 64,
                          'Ordenes.NrOrdenes'         : 4,
-                         'PuertoSerie.Puerto'        : 'COM1', 
+                         'PuertoSerie.Puerto'        : 'COM1',
                          'PuertoSerie.Baudios'       : 9600,
                          'PuertoSerie.BitsDatos'     : 8,
                          'PuertoSerie.Paridad'       : 'E',
                          'PuertoSerie.BitsStop'      : 2,
-                         'Protocolo.DirRemota'       : 1
+                         'Protocolo.DirRemota'       : 1,
+                         'Telegram.Habilitado'       : False,
+                         'Telegram.NombreBot'        : '',
+                         'Telegram.Token'            : '',
+                         'Telegram.ChatID'           : ''
                        }  
     self._sNombreFich= self._sNombreFich_Def
     
@@ -119,11 +123,43 @@ class FichConfig:
 
   # *** Parametro= Protocolo.DirRemota ****************************************************************************************
 
-  def Protocolo_DirRemota_Set(self, Valor): 
+  def Protocolo_DirRemota_Set(self, Valor):
     if ((type(Valor) != int) or (Valor not in range(1, 254))) : return False
     self._dParametros['Protocolo.DirRemota']= Valor
     return True
-    
+
+
+  # *** Parametro= Telegram.Habilitado ****************************************************************************************
+
+  def Telegram_Habilitado_Set(self, Valor):
+    if (type(Valor) != bool) : return False
+    self._dParametros['Telegram.Habilitado']= Valor
+    return True
+
+
+  # *** Parametro= Telegram.NombreBot *****************************************************************************************
+
+  def Telegram_NombreBot_Set(self, Valor):
+    if (type(Valor) != str) : return False
+    self._dParametros['Telegram.NombreBot']= Valor.strip()
+    return True
+
+
+  # *** Parametro= Telegram.Token *********************************************************************************************
+
+  def Telegram_Token_Set(self, Valor):
+    if (type(Valor) != str) : return False
+    self._dParametros['Telegram.Token']= Valor.strip()
+    return True
+
+
+  # *** Parametro= Telegram.ChatID ********************************************************************************************
+
+  def Telegram_ChatID_Set(self, Valor):
+    if (type(Valor) != str) : return False
+    self._dParametros['Telegram.ChatID']= Valor.strip()
+    return True
+
 
   # ***************************************************************************************************************************
   # *** Obtener todos los parámetros en un diccionario
@@ -218,7 +254,25 @@ class FichConfig:
     sNombreParametro= 'Protocolo.DirRemota'
     esteApartado.setAttribute(sNombreParametro.split('.')[1], str(self._dParametros[sNombreParametro]))
     raiz.appendChild(esteApartado)
-       
+
+    # **** Crear apartado 'Telegram' ******************************************************************************************
+
+    esteApartado = documento.createElement('Telegram')
+
+    sNombreParametro= 'Telegram.Habilitado'
+    esteApartado.setAttribute(sNombreParametro.split('.')[1], 'True' if self._dParametros[sNombreParametro] else 'False')
+
+    sNombreParametro= 'Telegram.NombreBot'
+    esteApartado.setAttribute(sNombreParametro.split('.')[1], self._dParametros[sNombreParametro])
+
+    sNombreParametro= 'Telegram.Token'
+    esteApartado.setAttribute(sNombreParametro.split('.')[1], self._dParametros[sNombreParametro])
+
+    sNombreParametro= 'Telegram.ChatID'
+    esteApartado.setAttribute(sNombreParametro.split('.')[1], self._dParametros[sNombreParametro])
+
+    raiz.appendChild(esteApartado)
+
     # **** Finalizar la creacion de la configuracion **************************************************************************
 
     documento.appendChild(raiz)
@@ -381,6 +435,30 @@ class FichConfig:
       elif sNombreParametro == 'Protocolo.DirRemota' :
         sValor= dictAux[sNombreParametro].strip()
         bHayError= not (self.Protocolo_DirRemota_Set(int(sValor)))
+
+      # --- Telegram.Habilitado -----------------------------------------------------------------------------------------------
+
+      elif sNombreParametro == 'Telegram.Habilitado' :
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Telegram_Habilitado_Set(sValor == 'True'))
+
+      # --- Telegram.NombreBot ------------------------------------------------------------------------------------------------
+
+      elif sNombreParametro == 'Telegram.NombreBot' :
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Telegram_NombreBot_Set(sValor))
+
+      # --- Telegram.Token ----------------------------------------------------------------------------------------------------
+
+      elif sNombreParametro == 'Telegram.Token' :
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Telegram_Token_Set(sValor))
+
+      # --- Telegram.ChatID ---------------------------------------------------------------------------------------------------
+
+      elif sNombreParametro == 'Telegram.ChatID' :
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Telegram_ChatID_Set(sValor))
 
       if (bHayError) :
         sTxtError+= '- ERROR: Valor de ' + sNombreParametro + ' no vlido. Valor= ' + sValor + '\n'

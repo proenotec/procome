@@ -15,6 +15,7 @@
 import PROCOME_General
 import PROCOME_ConstruirTramaTrm
 import PROCOME_AnalizarTramaRcp
+import PROCOME_Telegram
 # import serial
 
 # #############################################################################################################################
@@ -27,7 +28,7 @@ class PROCOME_MaqEstados:
   # **** Constructor
   # ***************************************************************************************************************************
 
-  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug):
+  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None):
 
     # **** Constantes *********************************************************************************************************
 
@@ -91,8 +92,10 @@ class PROCOME_MaqEstados:
     self._oConstrTramaRcp= oConstrTramaRcp
     self._oCanalSerie= oCanalSerie
     self._oFormPpal= oFormPpal
-    
-    
+    self._oTelegram= oTelegram
+    self._bEstadoComunicacionAnterior= None  # Para detectar cambios de estado
+
+
     # **** Fin ****************************************************************************************************************
 
     return
@@ -741,12 +744,16 @@ class PROCOME_MaqEstados:
     # ==== Final de la funcin
     # =========================================================================================================================
 
-    if (self._bVerMensDbg_Evento or self._bVerMensDbg_Estado) : 
+    if (self._bVerMensDbg_Evento or self._bVerMensDbg_Estado) :
       sTexto=''
       if (self._bVerMensDbg_Evento) : sTexto+= 'Evento= <' + sEvento + '>'
       if (self._bVerMensDbg_Evento and self._bVerMensDbg_Estado) : sTexto+= '.'
       if (self._bVerMensDbg_Estado) : sTexto+= 'Estado= ' + self._lEstado[0] + '.' + self._lEstado[1] + ' / ' + self._sEstadoCom
       print('  << ProcesarEventos.Salida >>   ' + sTexto)
+
+    # **** Notificar cambios en el estado de comunicación por Telegram ***********************************************************
+
+    self._NotificarCambioEstadoComunicacion()
 
     return ''  
 
@@ -1159,6 +1166,38 @@ class PROCOME_MaqEstados:
       self._iDir = iNuevaDireccion
       return True
     return False
+
+
+  # ===========================================================================================================================
+  # ==== Actualizar cliente de Telegram
+  # ===========================================================================================================================
+
+  def ActualizarTelegram(self, oTelegram):
+    """Actualiza el cliente de Telegram"""
+    self._oTelegram = oTelegram
+
+
+  # ===========================================================================================================================
+  # ==== Notificar cambios en el estado de comunicación por Telegram
+  # ===========================================================================================================================
+
+  def _NotificarCambioEstadoComunicacion(self):
+    """Detecta cambios en el estado de comunicación y envía notificaciones por Telegram"""
+    if self._oTelegram is None:
+      return
+
+    # Determinar el estado actual de comunicación
+    bComunicandoAhora = self.Comunicando()
+
+    # Si es la primera vez, solo guardar el estado sin notificar
+    if self._bEstadoComunicacionAnterior is None:
+      self._bEstadoComunicacionAnterior = bComunicandoAhora
+      return
+
+    # Si cambió el estado, notificar
+    if bComunicandoAhora != self._bEstadoComunicacionAnterior:
+      self._oTelegram.NotificarEstadoComunicacion(bComunicandoAhora, self._iDir)
+      self._bEstadoComunicacionAnterior = bComunicandoAhora
 
 
   # ===========================================================================================================================

@@ -2,3 +2,6 @@
 #
 # pyserial: Librería para comunicación con puertos serie
 pyserial>=3.5
+
+# requests: Librería para realizar peticiones HTTP (necesaria para Telegram)
+requests>=2.25.0

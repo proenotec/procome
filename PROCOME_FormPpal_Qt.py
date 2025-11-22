@@ -10,13 +10,14 @@ import os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QPushButton,
                                QLineEdit, QComboBox, QSpinBox, QFrame, QGroupBox,
                                QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox,
-                               QFileDialog, QDialog, QTextEdit)
+                               QFileDialog, QDialog, QTextEdit, QCheckBox)
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QAction
 import PROCOME_General
 import PROCOME_MaqEstados
 import PROCOME_ConstruirTramaRcp
 import PROCOME_AnalizarTramaRcp
+import PROCOME_Telegram
 import FichConfig
 
 
@@ -146,9 +147,19 @@ class FormPpal:
 
     self._oConstrTramaRcp= PROCOME_ConstruirTramaRcp.PROCOME_ConstruirTramaRcp(0x07)
 
+    # **** Crear el cliente de Telegram ****************************************************************************************
+
+    dCfg= self._oFichCfg.Parametros_Get()
+    self._oTelegram= PROCOME_Telegram.PROCOME_Telegram(
+      bHabilitado = dCfg.get('Telegram.Habilitado', False),
+      sToken = dCfg.get('Telegram.Token', ''),
+      sChatID = dCfg.get('Telegram.ChatID', ''),
+      sNombreBot = dCfg.get('Telegram.NombreBot', '')
+    )
+
     # **** Crear la maquina de estados *******************************************************************************************
 
-    self._oMaqEstados= PROCOME_MaqEstados.PROCOME_MaqEstados(self._iDirProtocolo, self._dTemp, self._oConstrTramaRcp, self._oCSerie, self, self._iDEBUG_MaqEstados)
+    self._oMaqEstados= PROCOME_MaqEstados.PROCOME_MaqEstados(self._iDirProtocolo, self._dTemp, self._oConstrTramaRcp, self._oCSerie, self, self._iDEBUG_MaqEstados, self._oTelegram)
     #iRta= self.oMaqEstados.ProcesarEventos('Arrancar')
     #DEBUG_bHayUnaTrm= (iRta == 10)
 
@@ -199,6 +210,7 @@ class FormPpal:
     self._qMenuConfig = self._qMenuBar.addMenu('Configuración')
     self._qMenuConfig.addAction('Puerto serie', self._MenuCfgPuertoSerie)
     self._qMenuConfig.addAction('Configuración general', self._MenuCfgGeneral)
+    self._qMenuConfig.addAction('Telegram', self._MenuCfgTelegram)
 
 
   # ===========================================================================================================================
@@ -214,7 +226,7 @@ class FormPpal:
     self._qtWindow.setCentralWidget(self._qfrFramePpal)
 
     # Layout principal vertical
-    mainLayout = QVBoxLayout(self._qfrFramePpal)
+    self._mainLayout = QVBoxLayout(self._qfrFramePpal)
 
 
     # [100] ==== Botón de arranque/Parada =====================================================================================
@@ -234,7 +246,7 @@ class FormPpal:
     buttonLayout.addWidget(self._qbVerConsola)
 
     buttonLayout.addStretch()
-    mainLayout.addLayout(buttonLayout)
+    self._mainLayout.addLayout(buttonLayout)
 
 
     # [110] ==== Frame: Medidas ==========================================================
@@ -243,7 +255,7 @@ class FormPpal:
     self._qgbMedidas.setStyleSheet(f"QGroupBox {{ background-color: {self._sColorFondo}; color: black; }} QGroupBox::title {{ color: black; }}")
     medidasLayout = QGridLayout()
     self._qgbMedidas.setLayout(medidasLayout)
-    mainLayout.addWidget(self._qgbMedidas)
+    self._mainLayout.addWidget(self._qgbMedidas)
 
     self._ldMedidas=[]
     iElemento= 0
@@ -295,7 +307,7 @@ class FormPpal:
     self._qgbEstados.setStyleSheet(f"QGroupBox {{ background-color: {self._sColorFondo}; color: black; }} QGroupBox::title {{ color: black; }}")
     estadosLayout = QGridLayout()
     self._qgbEstados.setLayout(estadosLayout)
-    mainLayout.addWidget(self._qgbEstados)
+    self._mainLayout.addWidget(self._qgbEstados)
 
     self._ldEstados=[]
     iElemento= 0
@@ -347,7 +359,7 @@ class FormPpal:
     self._qgbOrdenes.setStyleSheet(f"QGroupBox {{ background-color: {self._sColorFondo}; color: black; }} QGroupBox::title {{ color: black; }}")
     ordenesLayout = QGridLayout()
     self._qgbOrdenes.setLayout(ordenesLayout)
-    mainLayout.addWidget(self._qgbOrdenes)
+    self._mainLayout.addWidget(self._qgbOrdenes)
 
     self._ldOrdenes=[]
     iElemento= 0
@@ -421,7 +433,7 @@ class FormPpal:
     self._qgbEstado.setStyleSheet(f"QGroupBox {{ background-color: {self._sColorFondo}; color: black; }}")
     estadoLayout = QGridLayout()
     self._qgbEstado.setLayout(estadoLayout)
-    mainLayout.addWidget(self._qgbEstado)
+    self._mainLayout.addWidget(self._qgbEstado)
 
     # ---- Canal serie --------------------------------------------------------------------------------------------------------
 
@@ -974,6 +986,9 @@ class FormPpal:
         # Actualizar la pantalla con los nuevos valores
         self._qlDirProc_Valor.setText(str(self._iDirProtocolo))
 
+        # Reconstruir los frames con los nuevos valores
+        self._ReconstruirFrames()
+
         # Guardar automáticamente en el archivo de configuración
         self._oFichCfg.NrMedidas_Set(iNrMedidas)
         self._oFichCfg.NrEstDig_Set(iNrEstados)
@@ -1092,6 +1107,126 @@ class FormPpal:
 
     except Exception as e:
       QMessageBox.critical(self._qtWindow, 'Error', 'Error al cargar la configuracion: ' + str(e))
+
+  # ===========================================================================================================================
+  # ==== Menus - Configuracion - Telegram
+  # ===========================================================================================================================
+
+  def _MenuCfgTelegram(self):
+
+    if (self._bArranqueClase) : return
+
+    # **** Crear la ventana de dialogo ****
+
+    dVentanaCfgTelegram= QDialog(self._qtWindow)
+    dVentanaCfgTelegram.setWindowTitle('Configuracion - Telegram')
+    dVentanaCfgTelegram.setModal(True)
+
+    # **** Obtener valores actuales ****
+
+    dCfg= self._oFichCfg.Parametros_Get()
+    bHabilitadoActual= dCfg.get('Telegram.Habilitado', False)
+    sNombreBotActual= dCfg.get('Telegram.NombreBot', '')
+    sTokenActual= dCfg.get('Telegram.Token', '')
+    sChatIDActual= dCfg.get('Telegram.ChatID', '')
+
+    # **** Layout principal ****
+
+    mainLayout = QVBoxLayout(dVentanaCfgTelegram)
+
+    frm_principal= QWidget()
+    frm_principal.setStyleSheet("background-color: white; color: black;")
+    gridLayout = QGridLayout(frm_principal)
+    mainLayout.addWidget(frm_principal)
+
+    # **** Checkbox: Habilitar Telegram ****
+
+    chk_habilitado = QCheckBox('Habilitar notificaciones por Telegram')
+    chk_habilitado.setStyleSheet("color: black;")
+    chk_habilitado.setChecked(bHabilitadoActual)
+    gridLayout.addWidget(chk_habilitado, 0, 0, 1, 2)
+
+    # **** Nombre del Bot ****
+
+    lbl_nombre = QLabel('Nombre del Bot:')
+    lbl_nombre.setStyleSheet("color: black;")
+    gridLayout.addWidget(lbl_nombre, 1, 0, Qt.AlignmentFlag.AlignRight)
+    ent_nombre= QLineEdit()
+    ent_nombre.setText(sNombreBotActual)
+    ent_nombre.setPlaceholderText('Nombre descriptivo (opcional)')
+    gridLayout.addWidget(ent_nombre, 1, 1, Qt.AlignmentFlag.AlignLeft)
+
+    # **** Token del Bot ****
+
+    lbl_token = QLabel('Token del Bot:')
+    lbl_token.setStyleSheet("color: black;")
+    gridLayout.addWidget(lbl_token, 2, 0, Qt.AlignmentFlag.AlignRight)
+    ent_token= QLineEdit()
+    ent_token.setText(sTokenActual)
+    ent_token.setPlaceholderText('1234567890:ABCdefGHIjklMNOpqrsTUVwxyz')
+    ent_token.setMinimumWidth(300)
+    gridLayout.addWidget(ent_token, 2, 1, Qt.AlignmentFlag.AlignLeft)
+
+    # **** Chat ID ****
+
+    lbl_chatid = QLabel('Chat ID:')
+    lbl_chatid.setStyleSheet("color: black;")
+    gridLayout.addWidget(lbl_chatid, 3, 0, Qt.AlignmentFlag.AlignRight)
+    ent_chatid= QLineEdit()
+    ent_chatid.setText(sChatIDActual)
+    ent_chatid.setPlaceholderText('123456789 o -123456789')
+    gridLayout.addWidget(ent_chatid, 3, 1, Qt.AlignmentFlag.AlignLeft)
+
+    # **** Texto informativo ****
+
+    lbl_info = QLabel('Nota: El Token se obtiene de @BotFather en Telegram.\nEl Chat ID se puede obtener enviando un mensaje al bot y consultando\nla API de Telegram o usando @userinfobot')
+    lbl_info.setStyleSheet("color: #666666; font-size: 9pt;")
+    gridLayout.addWidget(lbl_info, 4, 0, 1, 2)
+
+    # **** Botones ****
+
+    buttonLayout = QHBoxLayout()
+
+    def _GuardarCfgTelegram():
+      try:
+        bHabilitado= chk_habilitado.isChecked()
+        sNombreBot= ent_nombre.text().strip()
+        sToken= ent_token.text().strip()
+        sChatID= ent_chatid.text().strip()
+
+        # Guardar en la configuracion
+        self._oFichCfg.Telegram_Habilitado_Set(bHabilitado)
+        self._oFichCfg.Telegram_NombreBot_Set(sNombreBot)
+        self._oFichCfg.Telegram_Token_Set(sToken)
+        self._oFichCfg.Telegram_ChatID_Set(sChatID)
+        self._oFichCfg.SalvarEnFichero()
+
+        # Actualizar el objeto de Telegram con la nueva configuración
+        self._oTelegram.ActualizarConfiguracion(bHabilitado, sToken, sChatID, sNombreBot)
+
+        # Actualizar en la máquina de estados
+        if self._oMaqEstados is not None:
+          self._oMaqEstados.ActualizarTelegram(self._oTelegram)
+
+        dVentanaCfgTelegram.accept()
+      except Exception as e:
+        QMessageBox.critical(dVentanaCfgTelegram, 'Error', 'Error al guardar la configuracion: ' + str(e))
+
+    btn_guardar= QPushButton('Guardar')
+    btn_guardar.setStyleSheet("background-color: lightgreen; color: black;")
+    btn_guardar.clicked.connect(_GuardarCfgTelegram)
+    buttonLayout.addWidget(btn_guardar)
+
+    btn_cancelar= QPushButton('Cancelar')
+    btn_cancelar.setStyleSheet("background-color: lightcoral; color: black;")
+    btn_cancelar.clicked.connect(dVentanaCfgTelegram.reject)
+    buttonLayout.addWidget(btn_cancelar)
+
+    mainLayout.addLayout(buttonLayout)
+
+    dVentanaCfgTelegram.exec()
+
+    return
 
   # ===========================================================================================================================
   # ==== Menus - Archivo - Salir
@@ -1281,6 +1416,189 @@ class FormPpal:
         self._qbArrancParar.setText('Arrancar la comunicación')
 
     return
+
+  # ===========================================================================================================================
+  # ==== Reconstruir frames dinámicamente
+  # ===========================================================================================================================
+
+  def _ReconstruirFrames(self):
+    """Reconstruye los frames de Medidas, Estados y Órdenes con los nuevos valores"""
+    # Reconstruir cada frame
+    self._ReconstruirFrameMedidas()
+    self._ReconstruirFrameEstados()
+    self._ReconstruirFrameOrdenes()
+
+    # Ajustar el tamaño de la ventana
+    self._qtWindow.adjustSize()
+    self._qtWindow.setFixedSize(self._qtWindow.size())
+
+  def _ReconstruirFrameMedidas(self):
+    """Reconstruye el frame de medidas con el nuevo número de medidas"""
+    # Eliminar el widget anterior
+    self._mainLayout.removeWidget(self._qgbMedidas)
+    self._qgbMedidas.deleteLater()
+
+    # Crear el nuevo frame
+    self._qgbMedidas= QGroupBox('Medidas')
+    self._qgbMedidas.setStyleSheet(f"QGroupBox {{ background-color: {self._sColorFondo}; color: black; }} QGroupBox::title {{ color: black; }}")
+    medidasLayout = QGridLayout()
+    self._qgbMedidas.setLayout(medidasLayout)
+
+    # Insertar en la posición correcta (después de los botones, antes de estados)
+    self._mainLayout.insertWidget(1, self._qgbMedidas)
+
+    # Crear los widgets
+    self._ldMedidas=[]
+    iElemento= 0
+    iFila= 0
+    iColumna= 0
+    iNrElemPorFila= 5
+    iSubColumna= 0
+
+    while (iElemento < self._iNrMedidas):
+      self._ldMedidas.append({'Etiqueta' : None, 'Valor' : None, 'Validez' : None})
+
+      self._ldMedidas[iElemento]['Etiqueta']= QLabel('Medida ' + str(iElemento + 1) + ':')
+      self._ldMedidas[iElemento]['Etiqueta'].setStyleSheet(f"background-color: {self._sColorFondo}; color: black;")
+      medidasLayout.addWidget(self._ldMedidas[iElemento]['Etiqueta'], iFila, iSubColumna, Qt.AlignmentFlag.AlignLeft)
+      iSubColumna+=1
+
+      self._ldMedidas[iElemento]['Valor']= QLabel('xxx.x %')
+      self._ldMedidas[iElemento]['Valor'].setStyleSheet(f"background-color: {self._sColorFondo}; color: black;")
+      medidasLayout.addWidget(self._ldMedidas[iElemento]['Valor'], iFila, iSubColumna)
+      iSubColumna+=1
+
+      self._ldMedidas[iElemento]['Validez']= QLabel('IV OV')
+      self._ldMedidas[iElemento]['Validez'].setStyleSheet(f"background-color: {self._sColorFondo}; color: red;")
+      medidasLayout.addWidget(self._ldMedidas[iElemento]['Validez'], iFila, iSubColumna)
+      iSubColumna+=1
+
+      iElemento+= 1
+      iColumna+= 1
+      if (iColumna == iNrElemPorFila) :
+        iColumna= 0
+        iSubColumna= 0
+        iFila+= 1
+
+    self._Medidas_BorrarValores()
+
+  def _ReconstruirFrameEstados(self):
+    """Reconstruye el frame de estados con el nuevo número de estados"""
+    # Eliminar el widget anterior
+    self._mainLayout.removeWidget(self._qgbEstados)
+    self._qgbEstados.deleteLater()
+
+    # Crear el nuevo frame
+    self._qgbEstados= QGroupBox('Estados')
+    self._qgbEstados.setStyleSheet(f"QGroupBox {{ background-color: {self._sColorFondo}; color: black; }} QGroupBox::title {{ color: black; }}")
+    estadosLayout = QGridLayout()
+    self._qgbEstados.setLayout(estadosLayout)
+
+    # Insertar en la posición correcta (después de medidas, antes de órdenes)
+    self._mainLayout.insertWidget(2, self._qgbEstados)
+
+    # Crear los widgets
+    self._ldEstados=[]
+    iElemento= 0
+    iFila= 0
+    iColumna= 0
+    iNrElemPorFila= 11
+    iSubColumna= 0
+
+    while (iElemento < self._iNrEstados):
+      self._ldEstados.append({'Etiqueta' : None, 'Valor' : None, 'Validez' : None})
+
+      self._ldEstados[iElemento]['Etiqueta']= QLabel('E' + str(iElemento + 1) + ':')
+      self._ldEstados[iElemento]['Etiqueta'].setStyleSheet(f"background-color: {self._sColorFondo}; color: black;")
+      estadosLayout.addWidget(self._ldEstados[iElemento]['Etiqueta'], iFila, iSubColumna, Qt.AlignmentFlag.AlignLeft)
+      iSubColumna+=1
+
+      self._ldEstados[iElemento]['Valor']= QLabel('x')
+      self._ldEstados[iElemento]['Valor'].setStyleSheet(f"background-color: {self._sColorFondo}; color: black;")
+      estadosLayout.addWidget(self._ldEstados[iElemento]['Valor'], iFila, iSubColumna)
+      iSubColumna+=1
+
+      self._ldEstados[iElemento]['Validez']= QLabel('IV')
+      self._ldEstados[iElemento]['Validez'].setStyleSheet(f"background-color: {self._sColorFondo}; color: red;")
+      estadosLayout.addWidget(self._ldEstados[iElemento]['Validez'], iFila, iSubColumna)
+      iSubColumna+=1
+
+      iElemento+= 1
+      iColumna+= 1
+      if (iColumna == iNrElemPorFila) :
+        iColumna= 0
+        iSubColumna= 0
+        iFila+= 1
+
+    self._Estados_BorrarValores()
+
+  def _ReconstruirFrameOrdenes(self):
+    """Reconstruye el frame de órdenes con el nuevo número de órdenes"""
+    # Eliminar el widget anterior
+    self._mainLayout.removeWidget(self._qgbOrdenes)
+    self._qgbOrdenes.deleteLater()
+
+    # Crear el nuevo frame
+    self._qgbOrdenes= QGroupBox('Ordenes')
+    self._qgbOrdenes.setStyleSheet(f"QGroupBox {{ background-color: {self._sColorFondo}; color: black; }} QGroupBox::title {{ color: black; }}")
+    ordenesLayout = QGridLayout()
+    self._qgbOrdenes.setLayout(ordenesLayout)
+
+    # Insertar en la posición correcta (después de estados, antes de barra de estado)
+    self._mainLayout.insertWidget(3, self._qgbOrdenes)
+
+    # Crear los widgets
+    self._ldOrdenes=[]
+    iElemento= 0
+    iFila= 0
+    iColumna= 0
+    iNrElemPorFila= 7
+    iSubColumna= 0
+    iUltCol= iSubColumna
+
+    while (iElemento < self._iNrOrdenes):
+      self._ldOrdenes.append({'Etiqueta' : None, 'Abrir' : None, 'Cerrar' : None})
+
+      self._ldOrdenes[iElemento]['Etiqueta']= QLabel('S' + str(iElemento + 1) + ':')
+      self._ldOrdenes[iElemento]['Etiqueta'].setStyleSheet(f"background-color: {self._sColorFondo}; color: black;")
+      ordenesLayout.addWidget(self._ldOrdenes[iElemento]['Etiqueta'], iFila, iSubColumna)
+      iSubColumna+=1
+
+      self._ldOrdenes[iElemento]['Abrir']= QPushButton('Abrir')
+      self._ldOrdenes[iElemento]['Abrir'].setStyleSheet(f"background-color: {self._sColorGris};")
+      self._ldOrdenes[iElemento]['Abrir'].clicked.connect(lambda checked, idx=iElemento: self._OrdenAbrir(idx))
+      ordenesLayout.addWidget(self._ldOrdenes[iElemento]['Abrir'], iFila, iSubColumna)
+      iSubColumna+=1
+
+      self._ldOrdenes[iElemento]['Cerrar']= QPushButton('Cerrar')
+      self._ldOrdenes[iElemento]['Cerrar'].setStyleSheet(f"background-color: {self._sColorGris};")
+      self._ldOrdenes[iElemento]['Cerrar'].clicked.connect(lambda checked, idx=iElemento: self._OrdenCerrar(idx))
+      ordenesLayout.addWidget(self._ldOrdenes[iElemento]['Cerrar'], iFila, iSubColumna)
+      iSubColumna+=1
+
+      if (iUltCol < iSubColumna) : iUltCol= iSubColumna
+      iElemento+= 1
+      if (iElemento < self._iNrOrdenes):
+        iColumna+= 1
+        if (iColumna == iNrElemPorFila) :
+          iColumna= 0
+          iSubColumna= 0
+          iFila+= 1
+
+    self._Ordenes_ColorearBotones(False)
+
+    # Botón de limpiar
+    iFila+= 1
+    self._qbOrdenes_Limpiar= QPushButton('Limpiar')
+    self._qbOrdenes_Limpiar.setStyleSheet(f"background-color: {self._sColorGris};")
+    self._qbOrdenes_Limpiar.clicked.connect(self._Orden_LimpiarMensaje)
+    ordenesLayout.addWidget(self._qbOrdenes_Limpiar, iFila, 0, 1, 2)
+
+    # Zona de mensajes
+    self._qlOrdenes_Mensaje= QLabel('...')
+    self._qlOrdenes_Mensaje.setStyleSheet("background-color: yellow; color: black;")
+    ordenesLayout.addWidget(self._qlOrdenes_Mensaje, iFila, 2, 1, iUltCol + 1 -2)
+    self._Ordenes_MostrarMensaje('')
 
   # ===========================================================================================================================
   # ==== Ventana de Consola
