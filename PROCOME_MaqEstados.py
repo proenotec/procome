@@ -32,7 +32,7 @@ class PROCOME_MaqEstados:
 
     # **** Constantes *********************************************************************************************************
 
-    self._K_iNrMaxIntentos= 3
+    self._K_iNrMaxIntentos= 10
     self._K_fTmoRcp_Std_seg= 1.0
     self._K_fTmoSincrPeriodica_seg=     15.0 # % 10.0 * 60
     self._K_fTmoPetGralPeriodica_seg=   2.0 # % 5.0
@@ -203,20 +203,23 @@ class PROCOME_MaqEstados:
           # **** Evento: 'Arrancar' *******************************************************************************************
 
           if (sEvento == 'Arrancar') :
-            if (self._oCanalSerie.is_open) :
-              self._CancelarLaComunicacion()
-              return 'ERROR DE SOFTWARE: Al intentar abrir el canal serie <'  + sNombreCanalserie + '>, ya está abierto por este programa'
-            else :
+            # Si el puerto no está abierto, intentar abrirlo
+            if not self._oCanalSerie.is_open:
               try :
                 self._oCanalSerie.open()
               except :
                 self._CancelarLaComunicacion()
                 return 'ERROR: Al intentar abrir el canal serie <'  + self._oCanalSerie.port + '>. Puede ser que ese canal serie no exista o que esta ocupado'
-                #
-            self._oConstrTramaRcp.Reset()           # Borrar lo que haya en el buffer de las tramas de recepcion
-            self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
-            self._oCanalSerie.reset_output_buffer() # Borrar lo que haya en el buffer de transmisin
-            self._oCanalSerie.rts= False            # Desactivar la seal RTS para no permitir la transmisin por el RS485
+
+            # Limpiar buffer de tramas de recepción (solo el local, no el del puerto serie)
+            self._oConstrTramaRcp.Reset()
+
+            # NO limpiar buffers del puerto serie en modo multi-tarjeta
+            # (el gestor multi-tarjeta ya los limpia una sola vez)
+            try:
+              self._oCanalSerie.rts= False  # Desactivar RTS para no permitir transmisión por RS485
+            except:
+              pass  # Ignorar error si el puerto no soporta RTS
 
             # ==== Cancelar cualquier Timeout en marcha =======================================================================
             #
@@ -283,7 +286,7 @@ class PROCOME_MaqEstados:
                 if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
                 self._lEstado= ['Enlace', 'SinComunicacion']
                 self._sEstadoCom= 'Reposo'
-                self._dTemp['TmpEspera_seg']= 3.0
+                self._dTemp['TmpEspera_seg']= 5.0  # Reintentar cada 5 segundos
                 sEvento= 'Procesado'
 
               elif (iFuncion == PROCOME_General.PROCOME_CONFIRM_ACK) :
@@ -325,6 +328,7 @@ class PROCOME_MaqEstados:
           # **** Evento: 'TimeoutEspera' **************************************************************************************
 
           if (sEvento == 'TimeoutEspera') :
+            print('Enlace: Reintentando conexión...')
             self._lEstado= ['Enlace', 'RstLinRemota']
             self._sEstadoCom= 'PrepTrm'
             sEvento= 'ProcesarDeNuevo'
@@ -768,26 +772,26 @@ class PROCOME_MaqEstados:
     self._iIntentosTrmQuedan-= 1
     if (self._iIntentosTrmQuedan > 0) :
       self._sEstadoCom= 'Trm'
-      sEvento= 'ProcesarDeNuevo' 
+      sEvento= 'ProcesarDeNuevo'
     else :
       self._lEstado= ['Enlace', 'SinComunicacion']
       self._sEstadoCom= 'Reposo'
 
-      # Cancelar cualquier Temporizacin en marcha
+      # Cancelar temporizaciones en marcha excepto TmpEspera
 
       self._dTemp['TmpRcp_seg']= 0
-      self._dTemp['TmpEspera_seg']= 0
+      self._dTemp['TmpEspera_seg']= 5.0  # Reintentar cada 5 segundos
       self._dTemp['TmpSincr_seg']= 0
       self._dTemp['TmpPetGral_seg']= 0
       self._dTemp['TmpPetEstDig_seg']= 0
 
       # Cancelar la peticiones periodicas pendientes
-      # 
+      #
       # self._EnvioSincrPeriodica= False
       # self._PetGralPeriodica= False
       # self._PetEstDigPeriodica= False
 
-      self._dTemp['TmpEspera_seg']= 3.0
+      # NOTA: TmpEspera_seg ya está configurado a 5.0 en línea 783 para reintento automático
       sEvento= 'Procesado'
     return  sEvento
 
@@ -1145,7 +1149,27 @@ class PROCOME_MaqEstados:
   # ===========================================================================================================================
 
   def Comunicando(self):
-    return self._lEstado != ['Enlace', 'Reposo']
+    # Devuelve el estado de comunicación:
+    # 0 = Sin comunicación (rojo)
+    # 1 = Intentando comunicar (amarillo)
+    # 2 = Comunicando - recibiendo respuestas (verde)
+
+    if len(self._lEstado) < 2:
+      return 0
+
+    sSuperEstado = self._lEstado[0]
+    sEstado = self._lEstado[1]
+
+    # Sin comunicación: Reposo o SinComunicacion
+    if sSuperEstado == 'Enlace' and sEstado in ('Reposo', 'SinComunicacion'):
+      return 0
+
+    # Intentando: En proceso de enlace (transmitiendo pero sin confirmar respuesta)
+    if sSuperEstado == 'Enlace' and sEstado == 'RstLinRemota':
+      return 1
+
+    # Comunicando: Ha recibido respuestas (VaciarBufferClase1, Inicializacion, Bucle)
+    return 2
 
 
   # ===========================================================================================================================

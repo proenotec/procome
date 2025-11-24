@@ -1,0 +1,296 @@
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║                      MÁQUINA DE ESTADOS PROTOCOLO PROCOME                         ║
+║                           (Multi-Tarjeta RS-485)                                  ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          SUPER-ESTADO: ENLACE                                   │
+│                     (Gestión de la conexión física)                             │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │   REPOSO     │ ◄──────────────────┐
+    │  (Estado 0)  │                    │ Parar
+    │    [ROJO]    │                    │
+    └──────┬───────┘                    │
+           │                            │
+           │ Arrancar                   │
+           │                            │
+           ▼                            │
+    ┌──────────────────┐                │
+    │  RstLinRemota    │                │
+    │   (Estado 1)     │◄───────┐       │
+    │   [AMARILLO]     │        │       │
+    │                  │        │       │
+    │ - Envía RESET    │        │       │
+    │ - 10 intentos    │        │       │
+    └────┬────┬────────┘        │       │
+         │    │                 │       │
+    ACK  │    │ NACK/Timeout    │       │
+         │    │ (con intentos)  │       │
+         │    │                 │       │
+         │    └─────────────────┘       │
+         │                              │
+         │ 10 intentos fallidos         │
+         │      │                       │
+         │      ▼                       │
+         │  ┌──────────────────┐        │
+         │  │ SinComunicacion  │        │
+         │  │   (Estado 0)     │        │
+         │  │     [ROJO]       │        │
+         │  │                  │        │
+         │  │ Reintenta cada   │        │
+         │  │   5 segundos     │        │
+         │  └──────────────────┘        │
+         │           │                  │
+         │           │ TimeoutEspera    │
+         │           │ (reintento)      │
+         │           │                  │
+         │           └──────────────────┘
+         │
+         ▼
+    ┌──────────────────┐
+    │VaciarBufferClase1│
+    │   (Estado 2)     │
+    │    [VERDE]       │
+    │                  │
+    │ Recibe ACK       │
+    └────────┬─────────┘
+             │
+             │ Buffer limpio
+             │
+             ▼
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                      SUPER-ESTADO: INICIALIZACION                               │
+│                   (Sincronización y peticiones iniciales)                       │
+│                              [VERDE]                                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────────┐
+    │  Sincronizacion  │◄────────┐
+    │                  │         │ ACD=1
+    │ Envía mensaje    │         │ (hay datos)
+    │ ASDU tipo 103    │         │
+    └────────┬─────────┘         │
+             │                   │
+             │ ACD=0             │
+             │ (sin datos)       │
+             ▼                   │
+    ┌──────────────────┐         │
+    │PeticionEstadosDig│         │
+    │                  │         │
+    │ ASDU tipo 5      │         │
+    └────────┬─────────┘         │
+             │                   │
+             │ ACD=1 ────────────┘
+             │
+             │ ACD=0
+             ▼
+    ┌──────────────────┐
+    │ PeticionMedidas  │
+    │                  │
+    │ ASDU tipo 100    │
+    └────────┬─────────┘
+             │
+             │ ACD=0
+             │
+             ▼
+    ┌──────────────────┐
+    │ PeticionClase1   │
+    │                  │
+    │ ASDU tipo 103    │
+    └────────┬─────────┘
+             │
+             │ Datos recibidos
+             │
+             ▼
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         SUPER-ESTADO: BUCLE                                     │
+│                    (Operación normal continua)                                  │
+│                           [VERDE]                                               │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │   Entrada    │
+    └──────┬───────┘
+           │
+           ▼
+    ┌──────────────────────────────────────────────────────────────┐
+    │                      TiempoLibre                             │
+    │                                                              │
+    │  Espera eventos temporizados o peticiones de usuario         │
+    └──┬───┬────┬───────┬──────────┬──────────┬───────────────────┘
+       │   │    │       │          │          │
+       │   │    │       │          │          │
+       │   │    │       │          │          │ PetOrden
+       │   │    │       │          │          │ (usuario)
+       │   │    │       │          │          ▼
+       │   │    │       │          │    ┌──────────────┐
+       │   │    │       │          │    │PeticionOrden │
+       │   │    │       │          │    │              │
+       │   │    │       │          │    │ ASDU tipo 121│
+       │   │    │       │          │    └──────┬───────┘
+       │   │    │       │          │           │
+       │   │    │       │          │           │
+       │   │    │       │  Timeout │◄──────────┘
+       │   │    │       │  PetEstDig
+       │   │    │       │  (cada 5s)
+       │   │    │       │          │
+       │   │    │       │          ▼
+       │   │    │       │    ┌──────────────────┐
+       │   │    │       │    │PeticionEstadosDig│
+       │   │    │       │    │                  │
+       │   │    │       │    │   ASDU tipo 5    │
+       │   │    │       │    └──────┬───────────┘
+       │   │    │       │           │
+       │   │    │       │           │
+       │   │    │       │ Timeout  │◄──────────┘
+       │   │    │       │ PetGral
+       │   │    │       │ (cada 2s)
+       │   │    │       │           │
+       │   │    │       │           ▼
+       │   │    │       │    ┌──────────────┐
+       │   │    │       │    │PeticionMedidas│
+       │   │    │       │    │              │
+       │   │    │       │    │ASDU tipo 100 │
+       │   │    │       │    └──────┬───────┘
+       │   │    │       │           │
+       │   │    │       │           │
+       │   │    │       │ Timeout  │◄──────────┘
+       │   │    │       │ Sincr
+       │   │    │       │ (cada 15s)
+       │   │    │       │           │
+       │   │    │       │           ▼
+       │   │    │       │    ┌──────────────┐
+       │   │    │       │    │Sincronizacion│
+       │   │    │       │    │              │
+       │   │    │       │    │ASDU tipo 103 │
+       │   │    │       │    └──────┬───────┘
+       │   │    │       │           │
+       │   │    │       └───────────┘
+       │   │    │
+       │   │    │ ACD=1 (hay datos clase 1 pendientes)
+       │   │    │
+       │   │    ▼
+       │   │  ┌──────────────┐
+       │   │  │PeticionClase1│
+       │   │  │              │
+       │   │  │ASDU tipo 103 │
+       │   │  └──────┬───────┘
+       │   │         │
+       │   │         │
+       │   └─────────┴──────► Vuelve a TiempoLibre
+       │
+       │
+       └──► Si falla comunicación: vuelve a Enlace.RstLinRemota
+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        SUPER-ESTADO: CONTROL                                    │
+│                          (Finalización)                                         │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │    Parar     │──► Cierra puerto serie
+    │              │──► Cancela temporizadores
+    │              │──► Vuelve a Enlace.Reposo
+    └──────────────┘
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                           INDICADORES DE COLOR                                ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║  [ROJO]      - Sin comunicación (Reposo, SinComunicacion)                    ║
+║  [AMARILLO]  - Intentando conectar (RstLinRemota)                             ║
+║  [VERDE]     - Comunicando (resto de estados)                                 ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                          TEMPORIZADORES ACTIVOS                               ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║  TmpRcp       : 1.0 seg  - Timeout recepción (espera respuesta)              ║
+║  TmpEspera    : 5.0 seg  - Tiempo entre reintentos en SinComunicacion        ║
+║  TmpSincr     : 15.0 seg - Sincronización periódica en Bucle                 ║
+║  TmpPetGral   : 2.0 seg  - Petición medidas periódica en Bucle               ║
+║  TmpPetEstDig : 5.0 seg  - Petición estados digitales periódica en Bucle     ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                        TIPOS DE MENSAJES ASDU                                 ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║  ASDU 5   : Solicitud de identificación del equipo                           ║
+║  ASDU 100 : Solicitud/recepción de medidas y cambios de estado               ║
+║  ASDU 103 : Solicitud/recepción de estados digitales completos               ║
+║  ASDU 121 : Petición de orden (abrir/cerrar salida)                          ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                         BITS DE CONTROL                                       ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║  ACD (Access Demand) : Si está a 1, hay datos clase 1 pendientes en remoto   ║
+║  PRM (Primary)       : Identifica si el mensaje viene del maestro (1) o      ║
+║                        del esclavo (0)                                        ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+                              NOTAS IMPORTANTES
+═══════════════════════════════════════════════════════════════════════════════════
+
+1. ARQUITECTURA MULTI-TARJETA
+   ─────────────────────────────
+   - Cada tarjeta ejecuta su propia máquina de estados en un thread independiente
+   - Todas las tarjetas comparten el puerto serie RS-485 mediante un Lock (acceso
+     exclusivo por thread)
+   - Solo el primer thread lee del puerto y distribuye las tramas a todos los demás
+   - Cada thread filtra y procesa únicamente las tramas con su dirección PROCOME
+
+2. GESTIÓN DE REINTENTOS
+   ──────────────────────
+   - Máximo 10 intentos de conexión antes de pasar a SinComunicacion
+   - Desde SinComunicacion, reintenta automáticamente cada 5 segundos
+   - Los reintentos son infinitos (el sistema nunca deja de intentar reconectar)
+
+3. OPERACIÓN NORMAL (BUCLE)
+   ─────────────────────────
+   - En operación normal, mantiene peticiones periódicas de datos:
+     * Medidas cada 2 segundos
+     * Estados digitales cada 5 segundos
+     * Sincronización cada 15 segundos
+   - Responde inmediatamente a peticiones de órdenes del usuario (botones GUI)
+
+4. INDICADORES VISUALES
+   ────────────────────────
+   - ROJO: Sin comunicación (no intenta o falló después de 10 intentos)
+   - AMARILLO: Intentando establecer enlace (estado transitorio muy breve)
+   - VERDE: Comunicación establecida (recibiendo datos del equipo remoto)
+
+5. TOLERANCIA A ERRORES
+   ─────────────────────
+   - El sistema es tolerante a:
+     * Errores de transmisión puntuales
+     * Colisiones en el bus RS-485 (múltiples dispositivos)
+     * Desconexión temporal de equipos remotos
+     * Interferencias eléctricas
+   - Los botones de órdenes solo se habilitan cuando hay comunicación verde
+
+6. FILTRADO INTELIGENTE DE TIMEOUTS
+   ──────────────────────────────────
+   - Los timeouts solo se generan cuando son apropiados para el estado actual
+   - Ejemplo: TmpPetGral solo genera evento en super-estado Bucle
+   - Esto evita eventos inapropiados que causarían errores críticos
+
+7. PROTOCOLO PROCOME
+   ──────────────────
+   - Protocolo maestro-esclavo sobre RS-485
+   - El PC actúa como maestro (PRM=1)
+   - Los equipos remotos actúan como esclavos (PRM=0)
+   - Cada esclavo tiene una dirección única (1-253)
+   - Los mensajes incluyen checksum para detección de errores
+
+═══════════════════════════════════════════════════════════════════════════════════
+                            ARCHIVO GENERADO POR:
+                              PROCOME Multi-Tarjeta
+                           Claude Code - Anthropic
+═══════════════════════════════════════════════════════════════════════════════════

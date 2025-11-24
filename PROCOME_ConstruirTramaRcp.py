@@ -118,7 +118,7 @@ class PROCOME_ConstruirTramaRcp:
         
         else :
           self._lEstado= ['Comun', 'Error']
-          if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": CarÃÂ¡cter "START" no vÃÂ¡lido. Caracter= ' + Hex2(byDatoRcp)+ '>')
+          # Mensaje simplificado en producción
           return -11  
 
 
@@ -130,8 +130,6 @@ class PROCOME_ConstruirTramaRcp:
         self._lTrama.append(byDatoRcp)
         if (byDatoRcp != self._iChecksum) :
           self._lEstado= ['Comun', 'Error']
-          if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": Checksum no vÃÂ¡lido. Recibido= ' + Hex2(byDatoRcp)+ '. Calculado= ' + Hex2(self._iChecksum)+ '>')
-          if (self._bVerMensDbg_TramaParcial) : ImprimirTrama_Hex(' - Trama parcial: ', self._lTrama)
           return -12
         self._lEstado= ['Comun', 'End']
         return 0
@@ -147,8 +145,6 @@ class PROCOME_ConstruirTramaRcp:
         bHayError= bHayError or (not self._bEsTramaCorta and (byDatoRcp != PROCOME_General.TRAMALARGA_END))
         if (bHayError) :
           self._lEstado= ['Comun', 'Error']
-          if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": CarÃÂ¡cter "END" no vÃÂ¡lido. Caracter= ' + Hex2(byDatoRcp)+ '>')
-          if (self._bVerMensDbg_TramaParcial) : ImprimirTrama_Hex(' - Trama parcial: ', self._lTrama)
           return -13
         self._lEstado= ['Comun', 'TramaCompleta']
         return self._lTrama
@@ -160,7 +156,7 @@ class PROCOME_ConstruirTramaRcp:
 
       elif (sEstado == 'TramaCompleta') :
         self._lEstado= ['Comun', 'Error']
-        if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": Recibido un carÃÂ¡cter cuando ya hay una trama completa')
+        if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": Recibido un Carácter cuando ya hay una trama completa')
         return -14
 
       # 
@@ -168,7 +164,7 @@ class PROCOME_ConstruirTramaRcp:
       # 
 
       elif (sEstado == 'Error') :
-        if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": Recibido un carÃÂ¡cter cuando la trama ya es erronea')
+        if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": Recibido un Carácter cuando la trama ya es erronea')
         return -15
 
 
@@ -233,10 +229,8 @@ class PROCOME_ConstruirTramaRcp:
       # 
 
       elif (sEstado == 'Long2') :
-        self._lTrama.append(byDatoRcp)     
+        self._lTrama.append(byDatoRcp)
         if (self._LgTramaLarga != byDatoRcp) :
-          if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": La longitud de la trama no puede ser menor de 2. Dato recibido= ' + Hex2(byDatoRcp)+ '>')
-          if (self._bVerMensDbg_TramaParcial) : ImprimirTrama_Hex(' - Trama parcial: ', self._lTrama)
           return -32
         self._lEstado= ['TramaLarga', 'Start2']
         return 0
@@ -248,8 +242,6 @@ class PROCOME_ConstruirTramaRcp:
       elif (sEstado == 'Start2') :
         self._lTrama.append(byDatoRcp)
         if (byDatoRcp != PROCOME_General.TRAMALARGA_START) :
-          if (self._bVerMensDbg_ErrorReal) : print('ERROR en "PROCOME_ConstruirTramaRcp": Segundo carÃÂ¡cter "START" de una trama larga no vÃÂ¡lido. Caracter= ' + Hex2(byDatoRcp)+ '>')
-          if (self._bVerMensDbg_TramaParcial) : ImprimirTrama_Hex(' - Trama parcial: ', self._lTrama)
           return -33
         self._lEstado= ['TramaLarga', 'Ctrl']
         return 0
