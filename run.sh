@@ -6,16 +6,36 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
-# Verificar que existe el entorno virtual
+# Verificar que existe el entorno virtual, si no existe lo crea
 if [ ! -d ".venv" ]; then
-    echo "ERROR: No se encuentra el entorno virtual (.venv)"
-    echo "Ejecuta primero: python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt"
-    exit 1
+    echo "No se encuentra el entorno virtual (.venv)"
+    echo "Creando entorno virtual..."
+    python3 -m venv .venv
+    
+    if [ $? -ne 0 ]; then
+        echo "ERROR: No se pudo crear el entorno virtual"
+        echo "Asegúrate de tener python3-venv instalado: sudo apt install python3-venv"
+        exit 1
+    fi
+    
+    echo "Entorno virtual creado exitosamente"
+    echo "Activando entorno virtual..."
+    source .venv/bin/activate
+    
+    echo "Instalando dependencias desde requirements.txt..."
+    pip install -r requirements.txt
+    
+    if [ $? -ne 0 ]; then
+        echo "ERROR: No se pudieron instalar las dependencias"
+        exit 1
+    fi
+    
+    echo "Dependencias instaladas exitosamente"
+else
+    # Activar el entorno virtual existente
+    echo "Activando entorno virtual..."
+    source .venv/bin/activate
 fi
-
-# Activar el entorno virtual
-echo "Activando entorno virtual..."
-source .venv/bin/activate
 
 # Verificar que se activó correctamente
 if [ -z "$VIRTUAL_ENV" ]; then

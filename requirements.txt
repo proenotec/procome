@@ -1,7 +1,10 @@
-# Dependencias de PROCOME
-#
-# pyserial: Librería para comunicación con puertos serie
+# Dependencias Python para PROCOME
+
+# Comunicación serie
 pyserial>=3.5
 
-# requests: Librería para realizar peticiones HTTP (necesaria para Telegram)
+# Comunicación con terminales (necesaria para Telegram)
 requests>=2.25.0
+
+# Interfaz gráfica Qt (para PROCOME_Arranque_Qt.py)
+PySide6>=6.5.0
