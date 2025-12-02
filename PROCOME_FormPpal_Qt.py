@@ -74,7 +74,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.1.1"
+  _VERSION = "2.1.2"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -134,6 +134,7 @@ class FormPpal:
     self._qtConsoleWindow= None
     self._qtConsoleText= None
     self._oConsoleCapture= None
+    self._iContadorLineasConsola= 0  # Contador de escrituras en consola
 
     # **** Crear la aplicación Qt y la ventana gráfica ************************************************************************
 
@@ -1244,8 +1245,8 @@ class FormPpal:
     gridLayout.addWidget(lbl_maxlineas, 1, 0, Qt.AlignmentFlag.AlignRight)
 
     sbx_maxlineas = QSpinBox()
-    sbx_maxlineas.setRange(100, 100000)
-    sbx_maxlineas.setSingleStep(1000)
+    sbx_maxlineas.setRange(20, 100000)
+    sbx_maxlineas.setSingleStep(10)
     sbx_maxlineas.setValue(iMaxLineasActual)
     gridLayout.addWidget(sbx_maxlineas, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
@@ -1253,6 +1254,7 @@ class FormPpal:
     lbl_info = QLabel(
       'Nota: Un valor alto (>10000) puede causar problemas de rendimiento.\n'
       'Valores recomendados:\n'
+      '  • 20-50: Para pruebas y depuración\n'
       '  • 1000-2000: Sistemas con poca RAM\n'
       '  • 5000: Balance óptimo (recomendado)\n'
       '  • 10000+: Si necesitas mucho historial\n\n'
@@ -1268,9 +1270,9 @@ class FormPpal:
       try:
         iMaxLineas = sbx_maxlineas.value()
 
-        if iMaxLineas < 100 or iMaxLineas > 100000:
+        if iMaxLineas < 20 or iMaxLineas > 100000:
           QMessageBox.critical(dVentanaCfgConsola, 'Error',
-            'El número de líneas debe estar entre 100 y 100000')
+            'El número de líneas debe estar entre 20 y 100000')
           return
 
         # Guardar en configuración
@@ -1335,7 +1337,7 @@ class FormPpal:
       return
 
     self._qtConsoleWindow = QDialog(self._qtWindow)
-    self._qtConsoleWindow.setWindowTitle('Consola')
+    self._qtConsoleWindow.setWindowTitle(f'Consola - 0/{self._iMaxLineasConsola} líneas')
     self._qtConsoleWindow.finished.connect(self._LimpiarRecursosConsola)
 
     mainLayout = QVBoxLayout(self._qtConsoleWindow)
@@ -1389,49 +1391,51 @@ class FormPpal:
       self._qtConsoleWindow.setGeometry(consoleX, consoleY, consoleWidth, consoleHeight)
 
   def _EscribirEnConsolaThreadSafe(self, texto):
-    """Escribe texto en la ventana de consola (thread-safe, llamado vía señal Qt)"""
+    """Escribe texto en la ventana de consola (thread-safe, llamado vía señal Qt)
+    Cada llamada a este método cuenta como una línea"""
     if self._qtConsoleText is not None:
-      # Verificar número de líneas actuales
-      iNrLineas = self._qtConsoleText.document().blockCount()
-
-      # Si supera el límite, eliminar las líneas más antiguas
-      if iNrLineas >= self._iMaxLineasConsola:
-        # Deshabilitar actualizaciones temporalmente para mejor rendimiento
-        self._qtConsoleText.setUpdatesEnabled(False)
-
-        try:
-          # Obtener todo el texto actual
-          sTextoActual = self._qtConsoleText.toPlainText()
-
-          # Dividir en líneas y mantener solo las últimas (dejando margen del 20%)
-          lLineas = sTextoActual.split('\n')
-          iLineasAMantener = int(self._iMaxLineasConsola * 0.8)
-
-          if len(lLineas) > iLineasAMantener:
-            # Mantener solo las últimas líneas
-            lLineasRecientes = lLineas[-iLineasAMantener:]
-            sTextoReducido = '\n'.join(lLineasRecientes)
-
-            # Reemplazar contenido
-            self._qtConsoleText.setPlainText(sTextoReducido)
-        finally:
-          # Re-habilitar actualizaciones
-          self._qtConsoleText.setUpdatesEnabled(True)
+      # Incrementar contador de líneas (cada escritura = 1 línea)
+      self._iContadorLineasConsola += 1
 
       # Agregar el nuevo texto
-      self._qtConsoleText.insertPlainText(texto)
+      self._qtConsoleText.append(texto.rstrip('\n'))  # append añade automáticamente el scroll
 
-      # Auto-scroll al final
-      scrollbar = self._qtConsoleText.verticalScrollBar()
-      scrollbar.setValue(scrollbar.maximum())
+      # Si supera el límite, limpiar el buffer manteniendo el 80%
+      if self._iContadorLineasConsola >= self._iMaxLineasConsola:
+        # Obtener todo el texto actual
+        sTextoCompleto = self._qtConsoleText.toPlainText()
+        lLineas = sTextoCompleto.split('\n')
 
-      # Actualizar widget
-      self._qtConsoleText.update()
+        # Calcular líneas a mantener (80% del límite)
+        iLineasAMantener = int(self._iMaxLineasConsola * 0.8)
+
+        # Mantener solo las últimas líneas del texto
+        if len(lLineas) > iLineasAMantener:
+          lLineasRecientes = lLineas[-iLineasAMantener:]
+          sTextoReducido = '\n'.join(lLineasRecientes)
+
+          # Reemplazar contenido
+          self._qtConsoleText.setPlainText(sTextoReducido)
+
+          # Forzar scroll al final para mostrar las líneas más recientes
+          scrollbar = self._qtConsoleText.verticalScrollBar()
+          scrollbar.setValue(scrollbar.maximum())
+
+        # Resetear contador al 80%
+        self._iContadorLineasConsola = iLineasAMantener
+
+      # Actualizar título solo cada 10 escrituras (optimización)
+      if self._iContadorLineasConsola % 10 == 0 or self._iContadorLineasConsola == 1:
+        if self._qtConsoleWindow is not None:
+          self._qtConsoleWindow.setWindowTitle(f'Consola - {self._iContadorLineasConsola}/{self._iMaxLineasConsola} líneas')
 
   def _LimpiarConsola(self):
     """Limpia el contenido de la consola"""
     if self._qtConsoleText is not None:
       self._qtConsoleText.clear()
+      self._iContadorLineasConsola = 0
+      if self._qtConsoleWindow is not None:
+        self._qtConsoleWindow.setWindowTitle(f'Consola - 0/{self._iMaxLineasConsola} líneas')
 
   def _CerrarConsola(self):
     """Cierra la ventana de consola"""
@@ -1446,5 +1450,6 @@ class FormPpal:
 
     self._qtConsoleWindow = None
     self._qtConsoleText = None
+    self._iContadorLineasConsola = 0
 
 # #############################################################################################################################

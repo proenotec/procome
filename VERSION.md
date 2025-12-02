@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.1.1
+## Versión Actual: 2.1.2
 
 ## Sistema de Versionado
 
@@ -70,6 +70,17 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v2.1.2 (2025-12-02)
+**Corrección de scroll en consola tras limpieza de buffer**
+
+Correcciones:
+- 🐛 Corregido scroll de consola que saltaba al inicio tras limpieza automática
+- 🐛 Ahora la consola permanece mostrando las líneas más recientes después del reset
+
+Técnico:
+- Agregado scroll automático al final tras `setPlainText()` en limpieza de buffer
+- Mejora de UX: usuario mantiene visibilidad de logs recientes
 
 ### v2.1.1 (2025-12-02)
 **Mejoras en lógica de indicadores y seguridad de órdenes**
