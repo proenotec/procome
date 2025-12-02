@@ -47,8 +47,29 @@ class FichConfig:
                          'Telegram.Habilitado'       : False,
                          'Telegram.NombreBot'        : '',
                          'Telegram.Token'            : '',
-                         'Telegram.ChatID'           : ''
-                       }  
+                         'Telegram.ChatID'           : '',
+                         # Configuración multi-tarjeta (6 tarjetas)
+                         'Tarjeta1.Habilitada'       : True,
+                         'Tarjeta1.DirRemota'        : 1,
+                         'Tarjeta1.TestsHabilitados' : False,
+                         'Tarjeta2.Habilitada'       : False,
+                         'Tarjeta2.DirRemota'        : 2,
+                         'Tarjeta2.TestsHabilitados' : False,
+                         'Tarjeta3.Habilitada'       : False,
+                         'Tarjeta3.DirRemota'        : 3,
+                         'Tarjeta3.TestsHabilitados' : False,
+                         'Tarjeta4.Habilitada'       : False,
+                         'Tarjeta4.DirRemota'        : 4,
+                         'Tarjeta4.TestsHabilitados' : False,
+                         'Tarjeta5.Habilitada'       : False,
+                         'Tarjeta5.DirRemota'        : 5,
+                         'Tarjeta5.TestsHabilitados' : False,
+                         'Tarjeta6.Habilitada'       : False,
+                         'Tarjeta6.DirRemota'        : 6,
+                         'Tarjeta6.TestsHabilitados' : False,
+                         # Configuración de la consola
+                         'Consola.MaxLineas'         : 5000
+                       }
     self._sNombreFich= self._sNombreFich_Def
     
   
@@ -158,6 +179,35 @@ class FichConfig:
   def Telegram_ChatID_Set(self, Valor):
     if (type(Valor) != str) : return False
     self._dParametros['Telegram.ChatID']= Valor.strip()
+    return True
+
+
+  # *** Parametro= Consola.MaxLineas ******************************************************************************************
+
+  def Consola_MaxLineas_Set(self, Valor):
+    if ((type(Valor) != int) or (Valor < 100) or (Valor > 100000)) : return False
+    self._dParametros['Consola.MaxLineas']= Valor
+    return True
+
+
+  # *** Parametros= Tarjetas (1-6) ********************************************************************************************
+
+  def Tarjeta_Habilitada_Set(self, iNrTarjeta, Valor):
+    if (type(iNrTarjeta) != int) or (iNrTarjeta < 1) or (iNrTarjeta > 6) : return False
+    if (type(Valor) != bool) : return False
+    self._dParametros[f'Tarjeta{iNrTarjeta}.Habilitada']= Valor
+    return True
+
+  def Tarjeta_DirRemota_Set(self, iNrTarjeta, Valor):
+    if (type(iNrTarjeta) != int) or (iNrTarjeta < 1) or (iNrTarjeta > 6) : return False
+    if (type(Valor) != int) or (Valor not in range(1, 254)) : return False
+    self._dParametros[f'Tarjeta{iNrTarjeta}.DirRemota']= Valor
+    return True
+
+  def Tarjeta_TestsHabilitados_Set(self, iNrTarjeta, Valor):
+    if (type(iNrTarjeta) != int) or (iNrTarjeta < 1) or (iNrTarjeta > 6) : return False
+    if (type(Valor) != bool) : return False
+    self._dParametros[f'Tarjeta{iNrTarjeta}.TestsHabilitados']= Valor
     return True
 
 
@@ -271,6 +321,29 @@ class FichConfig:
     sNombreParametro= 'Telegram.ChatID'
     esteApartado.setAttribute(sNombreParametro.split('.')[1], self._dParametros[sNombreParametro])
 
+    raiz.appendChild(esteApartado)
+
+    # **** Crear apartados 'Tarjeta1' a 'Tarjeta6' ****************************************************************************
+
+    for iNrTarjeta in range(1, 7):
+      esteApartado = documento.createElement(f'Tarjeta{iNrTarjeta}')
+
+      sNombreParametro= f'Tarjeta{iNrTarjeta}.Habilitada'
+      esteApartado.setAttribute('Habilitada', 'True' if self._dParametros[sNombreParametro] else 'False')
+
+      sNombreParametro= f'Tarjeta{iNrTarjeta}.DirRemota'
+      esteApartado.setAttribute('DirRemota', str(self._dParametros[sNombreParametro]))
+
+      sNombreParametro= f'Tarjeta{iNrTarjeta}.TestsHabilitados'
+      esteApartado.setAttribute('TestsHabilitados', 'True' if self._dParametros[sNombreParametro] else 'False')
+
+      raiz.appendChild(esteApartado)
+
+    # **** Crear apartado 'Consola' *******************************************************************************************
+
+    esteApartado = documento.createElement('Consola')
+    sNombreParametro= 'Consola.MaxLineas'
+    esteApartado.setAttribute(sNombreParametro.split('.')[1], str(self._dParametros[sNombreParametro]))
     raiz.appendChild(esteApartado)
 
     # **** Finalizar la creacion de la configuracion **************************************************************************
@@ -459,6 +532,33 @@ class FichConfig:
       elif sNombreParametro == 'Telegram.ChatID' :
         sValor= dictAux[sNombreParametro].strip()
         bHayError= not (self.Telegram_ChatID_Set(sValor))
+
+      # --- Tarjeta[1-6].Habilitada -------------------------------------------------------------------------------------------
+
+      elif sNombreParametro.startswith('Tarjeta') and sNombreParametro.endswith('.Habilitada') :
+        iNrTarjeta= int(sNombreParametro[7])
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Tarjeta_Habilitada_Set(iNrTarjeta, sValor == 'True'))
+
+      # --- Tarjeta[1-6].DirRemota --------------------------------------------------------------------------------------------
+
+      elif sNombreParametro.startswith('Tarjeta') and sNombreParametro.endswith('.DirRemota') :
+        iNrTarjeta= int(sNombreParametro[7])
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Tarjeta_DirRemota_Set(iNrTarjeta, int(sValor)))
+
+      # --- Tarjeta[1-6].TestsHabilitados -------------------------------------------------------------------------------------
+
+      elif sNombreParametro.startswith('Tarjeta') and sNombreParametro.endswith('.TestsHabilitados') :
+        iNrTarjeta= int(sNombreParametro[7])
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Tarjeta_TestsHabilitados_Set(iNrTarjeta, sValor == 'True'))
+
+      # --- Consola.MaxLineas -------------------------------------------------------------------------------------------------
+
+      elif sNombreParametro == 'Consola.MaxLineas' :
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Consola_MaxLineas_Set(int(sValor)))
 
       if (bHayError) :
         sTxtError+= '- ERROR: Valor de ' + sNombreParametro + ' no vlido. Valor= ' + sValor + '\n'

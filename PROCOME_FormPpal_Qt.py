@@ -66,6 +66,17 @@ class SignalEmitter(QObject):
 class FormPpal:
 
   # ***************************************************************************************************************************
+  # **** VERSIÓN DEL PROGRAMA
+  # ***************************************************************************************************************************
+  # Incrementar antes de cada commit a GitHub:
+  # - MAJOR: Cambios incompatibles o reestructuración importante
+  # - MINOR: Nuevas funcionalidades compatibles
+  # - PATCH: Correcciones de errores y mejoras menores
+  # ***************************************************************************************************************************
+
+  _VERSION = "2.1.0"
+
+  # ***************************************************************************************************************************
   # **** __init__
   # ***************************************************************************************************************************
 
@@ -75,6 +86,10 @@ class FormPpal:
 
     self._K_fTmoTempBuclePeriodico_ms= 50  # Aumentado para multi-tarjeta
     self._K_NR_MAX_TARJETAS= 6
+
+    # Límite de líneas en consola (se lee de configuración)
+    dCfgTemp = oFichCfg.Parametros_Get() if oFichCfg else {}
+    self._iMaxLineasConsola = dCfgTemp.get('Consola.MaxLineas', 5000)
 
     self._sColorGris= '#E0E0E0'
     self._sColorFondo= 'white'
@@ -127,7 +142,7 @@ class FormPpal:
       self._qApp = QApplication(sys.argv)
 
     self._qtWindow = QMainWindow()
-    self._qtWindow.setWindowTitle('PROCOME - Multi-Tarjeta')
+    self._qtWindow.setWindowTitle(f'PROCOME - Multi-Tarjeta v{self._VERSION}')
 
     # **** Construir la Barra de Menus ****************************************************************************************
 
@@ -193,6 +208,66 @@ class FormPpal:
 
 
   # ***************************************************************************************************************************
+  # **** Reconstruir GUI tras cambios de configuración
+  # ***************************************************************************************************************************
+
+  def _ReconstruirGUI(self):
+    """Reconstruye el GUI completo después de cambios de configuración"""
+
+    # Leer nueva configuración
+    dCfg = self._oFichCfg.Parametros_Get()
+    self._iNrMedidas = dCfg.get('Medidas.NrMedidas', 35)
+    self._iNrEstados = dCfg.get('EstadosDigitales.NrEstDig', 64)
+    self._iNrOrdenes = dCfg.get('Ordenes.NrOrdenes', 4)
+
+    # Eliminar GUI anterior
+    self._EliminarGUIActual()
+
+    # Recrear barra de indicadores
+    self._CrearBarraIndicadores()
+
+    # Recrear pestañas
+    for iNrTarjeta in range(1, self._K_NR_MAX_TARJETAS + 1):
+      bHabilitada = dCfg.get(f'Tarjeta{iNrTarjeta}.Habilitada', False)
+      iDirRemota = dCfg.get(f'Tarjeta{iNrTarjeta}.DirRemota', iNrTarjeta)
+
+      # Crear pestaña
+      tabWidget = self._CrearPestanaTarjeta(iNrTarjeta, iDirRemota, bHabilitada)
+      sTitulo = f'Tarjeta {iNrTarjeta}' + (f' (Dir {iDirRemota})' if bHabilitada else ' (Deshabilitada)')
+      self._qtTabWidget.addTab(tabWidget, sTitulo)
+
+    # Reinicializar gestor de tarjetas
+    self._oGestorTarjetas.InicializarTarjetas()
+
+
+  def _EliminarGUIActual(self):
+    """Elimina los widgets del GUI actual para permitir reconstrucción"""
+
+    # Eliminar todas las pestañas del TabWidget
+    while self._qtTabWidget.count() > 0:
+      widget = self._qtTabWidget.widget(0)
+      self._qtTabWidget.removeTab(0)
+      if widget:
+        widget.deleteLater()
+
+    # Limpiar diccionario de tarjetas GUI
+    self._dTarjetasGUI.clear()
+
+    # Buscar y eliminar el frame de indicadores existente
+    for i in range(self._mainLayout.count()):
+      item = self._mainLayout.itemAt(i)
+      if item and item.widget():
+        widget = item.widget()
+        if isinstance(widget, QGroupBox) and widget.title() == 'Estado de Comunicación':
+          self._mainLayout.removeWidget(widget)
+          widget.deleteLater()
+          break
+
+    # Limpiar diccionario de indicadores
+    self._dIndicadoresEstado.clear()
+
+
+  # ***************************************************************************************************************************
   # **** Construir los trozos de la pantalla
   # ***************************************************************************************************************************
 
@@ -209,6 +284,7 @@ class FormPpal:
     self._qMenuConfig.addAction('Puerto serie', self._MenuCfgPuertoSerie)
     self._qMenuConfig.addAction('Configuración general', self._MenuCfgGeneral)
     self._qMenuConfig.addAction('Configuración de tarjetas', self._MenuCfgTarjetas)
+    self._qMenuConfig.addAction('Consola', self._MenuCfgConsola)
     self._qMenuConfig.addAction('Telegram', self._MenuCfgTelegram)
 
 
@@ -808,10 +884,6 @@ class FormPpal:
 
     if self._bArranqueClase:
       return
-    if self._bComunicacionActiva:
-      QMessageBox.warning(self._qtWindow, 'Advertencia',
-        'No se puede cambiar la configuración mientras se está comunicando.\nPara aplicar los cambios: Parar comunicación → Cambiar config → Arrancar comunicación')
-      return
 
     dVentanaCfgGeneral = QDialog(self._qtWindow)
     dVentanaCfgGeneral.setWindowTitle('Configuración - General')
@@ -869,17 +941,33 @@ class FormPpal:
           QMessageBox.critical(dVentanaCfgGeneral, 'Error', 'El número de órdenes debe estar entre 1 y 256')
           return
 
-        self._iNrMedidas = iNrMedidas
-        self._iNrEstados = iNrEstados
-        self._iNrOrdenes = iNrOrdenes
-
+        # Guardar configuración
         self._oFichCfg.NrMedidas_Set(iNrMedidas)
         self._oFichCfg.NrEstDig_Set(iNrEstados)
         self._oFichCfg.NrOrdenes_Set(iNrOrdenes)
         self._oFichCfg.SalvarEnFichero()
 
+        # Guardar estado de comunicación
+        bEstabaComunicando = self._bComunicacionActiva
+
+        # Parar comunicación si estaba activa
+        if bEstabaComunicando:
+          self._oGestorTarjetas.PararComunicacion()
+          self._bComunicacionActiva = False
+
+        # Reconstruir GUI con nueva configuración
+        self._ReconstruirGUI()
+
+        # Reiniciar comunicación si estaba activa
+        if bEstabaComunicando:
+          sError = self._oGestorTarjetas.ArrancarComunicacion()
+          if not sError:
+            self._bComunicacionActiva = True
+            self._qbArrancParar.setStyleSheet(f"background-color: {self._sColorComunicando};")
+            self._qbArrancParar.setText('Parar comunicación')
+
         QMessageBox.information(dVentanaCfgGeneral, 'Información',
-          'Configuración guardada. Reinicie la aplicación para que los cambios tengan efecto.')
+          'Configuración guardada y aplicada correctamente.')
 
         dVentanaCfgGeneral.accept()
       except Exception as e:
@@ -903,10 +991,6 @@ class FormPpal:
     """Menú: Configuración de las 6 tarjetas"""
 
     if self._bArranqueClase:
-      return
-    if self._bComunicacionActiva:
-      QMessageBox.warning(self._qtWindow, 'Advertencia',
-        'No se puede cambiar la configuración mientras se está comunicando.\nPara aplicar los cambios: Parar comunicación → Cambiar config → Arrancar comunicación')
       return
 
     dVentanaCfgTarjetas = QDialog(self._qtWindow)
@@ -992,8 +1076,27 @@ class FormPpal:
 
         self._oFichCfg.SalvarEnFichero()
 
+        # Guardar estado de comunicación
+        bEstabaComunicando = self._bComunicacionActiva
+
+        # Parar comunicación si estaba activa
+        if bEstabaComunicando:
+          self._oGestorTarjetas.PararComunicacion()
+          self._bComunicacionActiva = False
+
+        # Reconstruir GUI con nueva configuración
+        self._ReconstruirGUI()
+
+        # Reiniciar comunicación si estaba activa
+        if bEstabaComunicando:
+          sError = self._oGestorTarjetas.ArrancarComunicacion()
+          if not sError:
+            self._bComunicacionActiva = True
+            self._qbArrancParar.setStyleSheet(f"background-color: {self._sColorComunicando};")
+            self._qbArrancParar.setText('Parar comunicación')
+
         QMessageBox.information(dVentanaCfgTarjetas, 'Información',
-          'Configuración de tarjetas guardada correctamente.\nReinicie la aplicación para que los cambios tengan efecto.')
+          'Configuración de tarjetas guardada y aplicada correctamente.')
 
         dVentanaCfgTarjetas.accept()
       except Exception as e:
@@ -1111,6 +1214,94 @@ class FormPpal:
     dVentanaCfgTelegram.exec()
 
 
+  def _MenuCfgConsola(self):
+    """Menú: Configuración de la consola"""
+
+    if self._bArranqueClase:
+      return
+
+    dVentanaCfgConsola = QDialog(self._qtWindow)
+    dVentanaCfgConsola.setWindowTitle('Configuración - Consola')
+    dVentanaCfgConsola.setModal(True)
+
+    dCfg = self._oFichCfg.Parametros_Get()
+    iMaxLineasActual = dCfg.get('Consola.MaxLineas', 5000)
+
+    mainLayout = QVBoxLayout(dVentanaCfgConsola)
+    frm_principal = QWidget()
+    frm_principal.setStyleSheet("background-color: white; color: black;")
+    gridLayout = QGridLayout(frm_principal)
+    mainLayout.addWidget(frm_principal)
+
+    # Título
+    lbl_titulo = QLabel('Configuración del buffer de la consola')
+    lbl_titulo.setStyleSheet("color: black; font-size: 12pt; font-weight: bold;")
+    gridLayout.addWidget(lbl_titulo, 0, 0, 1, 2)
+
+    # Número máximo de líneas
+    lbl_maxlineas = QLabel('Número máximo de líneas:')
+    lbl_maxlineas.setStyleSheet("color: black;")
+    gridLayout.addWidget(lbl_maxlineas, 1, 0, Qt.AlignmentFlag.AlignRight)
+
+    sbx_maxlineas = QSpinBox()
+    sbx_maxlineas.setRange(100, 100000)
+    sbx_maxlineas.setSingleStep(1000)
+    sbx_maxlineas.setValue(iMaxLineasActual)
+    gridLayout.addWidget(sbx_maxlineas, 1, 1, Qt.AlignmentFlag.AlignLeft)
+
+    # Texto informativo
+    lbl_info = QLabel(
+      'Nota: Un valor alto (>10000) puede causar problemas de rendimiento.\n'
+      'Valores recomendados:\n'
+      '  • 1000-2000: Sistemas con poca RAM\n'
+      '  • 5000: Balance óptimo (recomendado)\n'
+      '  • 10000+: Si necesitas mucho historial\n\n'
+      'Los cambios se aplican inmediatamente sin reiniciar.'
+    )
+    lbl_info.setStyleSheet("color: #666666; font-size: 9pt;")
+    gridLayout.addWidget(lbl_info, 2, 0, 1, 2)
+
+    # Botones
+    buttonLayout = QHBoxLayout()
+
+    def _GuardarCfgConsola():
+      try:
+        iMaxLineas = sbx_maxlineas.value()
+
+        if iMaxLineas < 100 or iMaxLineas > 100000:
+          QMessageBox.critical(dVentanaCfgConsola, 'Error',
+            'El número de líneas debe estar entre 100 y 100000')
+          return
+
+        # Guardar en configuración
+        self._oFichCfg.Consola_MaxLineas_Set(iMaxLineas)
+        self._oFichCfg.SalvarEnFichero()
+
+        # Aplicar cambio inmediatamente
+        self._iMaxLineasConsola = iMaxLineas
+
+        QMessageBox.information(dVentanaCfgConsola, 'Información',
+          f'Configuración guardada.\nNuevo límite: {iMaxLineas} líneas.')
+
+        dVentanaCfgConsola.accept()
+      except Exception as e:
+        QMessageBox.critical(dVentanaCfgConsola, 'Error',
+          'Error al guardar la configuración: ' + str(e))
+
+    btn_guardar = QPushButton('Guardar')
+    btn_guardar.setStyleSheet("background-color: lightgreen; color: black;")
+    btn_guardar.clicked.connect(_GuardarCfgConsola)
+    buttonLayout.addWidget(btn_guardar)
+
+    btn_cancelar = QPushButton('Cancelar')
+    btn_cancelar.setStyleSheet("background-color: lightcoral; color: black;")
+    btn_cancelar.clicked.connect(dVentanaCfgConsola.reject)
+    buttonLayout.addWidget(btn_cancelar)
+
+    mainLayout.addLayout(buttonLayout)
+    dVentanaCfgConsola.exec()
+
+
   def _MenuArchivoSalir(self):
     """Menú: Salir de la aplicación"""
     if self._qtWindow:
@@ -1200,9 +1391,41 @@ class FormPpal:
   def _EscribirEnConsolaThreadSafe(self, texto):
     """Escribe texto en la ventana de consola (thread-safe, llamado vía señal Qt)"""
     if self._qtConsoleText is not None:
+      # Verificar número de líneas actuales
+      iNrLineas = self._qtConsoleText.document().blockCount()
+
+      # Si supera el límite, eliminar las líneas más antiguas
+      if iNrLineas >= self._iMaxLineasConsola:
+        # Deshabilitar actualizaciones temporalmente para mejor rendimiento
+        self._qtConsoleText.setUpdatesEnabled(False)
+
+        try:
+          # Obtener todo el texto actual
+          sTextoActual = self._qtConsoleText.toPlainText()
+
+          # Dividir en líneas y mantener solo las últimas (dejando margen del 20%)
+          lLineas = sTextoActual.split('\n')
+          iLineasAMantener = int(self._iMaxLineasConsola * 0.8)
+
+          if len(lLineas) > iLineasAMantener:
+            # Mantener solo las últimas líneas
+            lLineasRecientes = lLineas[-iLineasAMantener:]
+            sTextoReducido = '\n'.join(lLineasRecientes)
+
+            # Reemplazar contenido
+            self._qtConsoleText.setPlainText(sTextoReducido)
+        finally:
+          # Re-habilitar actualizaciones
+          self._qtConsoleText.setUpdatesEnabled(True)
+
+      # Agregar el nuevo texto
       self._qtConsoleText.insertPlainText(texto)
+
+      # Auto-scroll al final
       scrollbar = self._qtConsoleText.verticalScrollBar()
       scrollbar.setValue(scrollbar.maximum())
+
+      # Actualizar widget
       self._qtConsoleText.update()
 
   def _LimpiarConsola(self):
