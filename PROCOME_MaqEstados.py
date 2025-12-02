@@ -67,6 +67,7 @@ class PROCOME_MaqEstados:
     
     self._iIntentosTrmQuedan= 0
     self._bHayTransmision= False
+    self._bHaComunicadoAlgunaVez= False  # Para controlar indicador amarillo
 
 
     # **** Inicializaciones. Comprobaciones ***********************************************************************************
@@ -292,11 +293,13 @@ class PROCOME_MaqEstados:
               elif (iFuncion == PROCOME_General.PROCOME_CONFIRM_ACK) :
                 self._dTemp['TmpRcp_seg']= 0
                 self._bBitFCB= False
-                if (bBitACD) : 
+                # Marcar que ha comunicado exitosamente al menos una vez
+                self._bHaComunicadoAlgunaVez= True
+                if (bBitACD) :
                   if (self._bVerMensDbg_TipoMensRcp) : print('Recibido un ACK (CONFIRM) con ACD= 1')
                   if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
                   self._lEstado= ['Enlace', 'VaciarBufferClase1']
-                else : 
+                else :
                   if (self._bVerMensDbg_TipoMensRcp) : print('Recibido un ACK (CONFIRM) con ACD= 0')
                   if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
                   self._lEstado= ['Inicializacion', 'Sincronizacion']
@@ -1165,8 +1168,12 @@ class PROCOME_MaqEstados:
       return 0
 
     # Intentando: En proceso de enlace (transmitiendo pero sin confirmar respuesta)
+    # Solo mostrar amarillo si ya ha comunicado al menos una vez antes
     if sSuperEstado == 'Enlace' and sEstado == 'RstLinRemota':
-      return 1
+      if self._bHaComunicadoAlgunaVez:
+        return 1  # Amarillo: reintentando comunicación
+      else:
+        return 0  # Rojo: nunca ha comunicado
 
     # Comunicando: Ha recibido respuestas (VaciarBufferClase1, Inicializacion, Bucle)
     return 2

@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.1.0
+## Versión Actual: 2.1.1
 
 ## Sistema de Versionado
 
@@ -70,6 +70,24 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v2.1.1 (2025-12-02)
+**Mejoras en lógica de indicadores y seguridad de órdenes**
+
+Mejoras:
+- 🔧 Indicadores permanecen en rojo si nunca han comunicado
+- 🔧 Solo pasan a amarillo en reintentos si ya comunicaron antes
+- 🔧 Botones de órdenes solo habilitados en estado verde (comunicando)
+- 🔧 Mayor claridad visual del estado real de cada tarjeta
+
+Correcciones:
+- 🐛 Corregida lógica de indicador amarillo para tarjetas sin comunicación previa
+- 🐛 Evita envío accidental de órdenes a tarjetas no comunicadas
+
+Técnico:
+- Nueva variable `_bHaComunicadoAlgunaVez` en máquina de estados
+- Marca primera comunicación exitosa al recibir ACK
+- Lógica mejorada en método `Comunicando()`
 
 ### v2.1.0 (2025-12-02)
 **Configuración avanzada y optimización de consola**
