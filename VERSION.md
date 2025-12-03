@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.1.2
+## Versión Actual: 2.2.0
 
 ## Sistema de Versionado
 
@@ -70,6 +70,29 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v2.2.0 (2025-12-03)
+**Instalador automático para Ubuntu/Debian**
+
+Características nuevas:
+- ✨ Instalador automático `install_ubuntu.sh` para versión ejecutable
+- ✨ Descarga automática desde GitHub Releases
+- ✨ Integración completa con menú de aplicaciones de Ubuntu
+- ✨ Generación automática de icono SVG personalizado
+- ✨ Desinstalador incluido
+- ✨ Documentación completa del proceso de instalación
+
+Mejoras:
+- 🔧 Archivo .desktop mejorado con más categorías y keywords
+- 🔧 Configuración automática de permisos para puerto serie
+- 🔧 Detección de versión instalada y actualización inteligente
+- 🔧 Soporte para múltiples distribuciones basadas en Debian
+
+Técnico:
+- Script bash completo con manejo de errores
+- Instalación en `/opt/procome/` con acceso global
+- Configuración de usuario en `~/.config/procome/`
+- Icono SVG embebido representando placa electrónica
 
 ### v2.1.2 (2025-12-02)
 **Corrección de scroll en consola tras limpieza de buffer**

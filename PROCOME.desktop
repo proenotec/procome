@@ -1,10 +1,13 @@
 [Desktop Entry]
-Version=1.0
+Version=1.1
 Type=Application
 Name=PROCOME
-Comment=Programa de Control Modular por Electrónica
-Exec=/home/manuel/Temporal/procome/procome
-Icon=dialog-information
+GenericName=Control Modular Electrónico
+Comment=Programa de Control Modular por Electrónica - Sistema de comunicación serial
+Exec=/opt/procome/procome
+Icon=/opt/procome/procome.png
 Terminal=false
-Categories=Utility;Electronics;
+Categories=Development;Electronics;Utility;
+Keywords=serial;electronics;control;modbus;scada;
 StartupNotify=true
+StartupWMClass=procome
