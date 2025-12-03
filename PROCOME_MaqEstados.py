@@ -287,7 +287,7 @@ class PROCOME_MaqEstados:
                 if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
                 self._lEstado= ['Enlace', 'SinComunicacion']
                 self._sEstadoCom= 'Reposo'
-                self._dTemp['TmpEspera_seg']= 5.0  # Reintentar cada 5 segundos
+                self._dTemp['TmpEspera_seg']= 1.0  # Reintentar cada 1 segundo
                 sEvento= 'Procesado'
 
               elif (iFuncion == PROCOME_General.PROCOME_CONFIRM_ACK) :
@@ -783,7 +783,7 @@ class PROCOME_MaqEstados:
       # Cancelar temporizaciones en marcha excepto TmpEspera
 
       self._dTemp['TmpRcp_seg']= 0
-      self._dTemp['TmpEspera_seg']= 5.0  # Reintentar cada 5 segundos
+      self._dTemp['TmpEspera_seg']= 1.0  # Reintentar cada 1 segundo
       self._dTemp['TmpSincr_seg']= 0
       self._dTemp['TmpPetGral_seg']= 0
       self._dTemp['TmpPetEstDig_seg']= 0

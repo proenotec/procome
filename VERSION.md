@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.2.0
+## Versión Actual: 2.2.1
 
 ## Sistema de Versionado
 
@@ -70,6 +70,18 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v2.2.1 (2025-12-03)
+**Mejora en tiempo de reconexión**
+
+Mejoras:
+- 🔧 Tiempo de reintento reducido de 5 segundos a 1 segundo
+- 🔧 Reconexión más rápida cuando una tarjeta falla
+- 🔧 Mejor respuesta del sistema ante fallos de comunicación
+
+Técnico:
+- Ajustado `TmpEspera_seg` de 5.0 a 1.0 en PROCOME_MaqEstados.py (líneas 290 y 786)
+- Aplica tanto a estado SinComunicacion como a recepción de NACK
 
 ### v2.2.0 (2025-12-03)
 **Instalador automático para Ubuntu/Debian**
