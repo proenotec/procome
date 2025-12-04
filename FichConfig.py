@@ -69,7 +69,8 @@ class FichConfig:
                          'Tarjeta6.TestsHabilitados' : False,
                          # Configuración de la consola
                          'Consola.MaxLineas'         : 5000,
-                         'Consola.ModoMensajes'      : 'explicado'  # 'explicado' o 'hex'
+                         'Consola.ModoMensajes'      : 'explicado',  # 'explicado' o 'hex'
+                         'Consola.BeepHabilitado'    : False
                        }
     self._sNombreFich= self._sNombreFich_Def
     
@@ -195,6 +196,13 @@ class FichConfig:
   def Consola_ModoMensajes_Set(self, Valor):
     if ((type(Valor) != str) or (Valor not in ['explicado', 'hex'])) : return False
     self._dParametros['Consola.ModoMensajes']= Valor
+    return True
+
+  # *** Parametro= Consola.BeepHabilitado **************************************************************************************
+
+  def Consola_BeepHabilitado_Set(self, Valor):
+    if (type(Valor) != bool) : return False
+    self._dParametros['Consola.BeepHabilitado']= Valor
     return True
 
 
@@ -354,6 +362,8 @@ class FichConfig:
     esteApartado.setAttribute(sNombreParametro.split('.')[1], str(self._dParametros[sNombreParametro]))
     sNombreParametro= 'Consola.ModoMensajes'
     esteApartado.setAttribute(sNombreParametro.split('.')[1], str(self._dParametros[sNombreParametro]))
+    sNombreParametro= 'Consola.BeepHabilitado'
+    esteApartado.setAttribute(sNombreParametro.split('.')[1], 'True' if self._dParametros[sNombreParametro] else 'False')
     raiz.appendChild(esteApartado)
 
     # **** Finalizar la creacion de la configuracion **************************************************************************
@@ -575,6 +585,12 @@ class FichConfig:
       elif sNombreParametro == 'Consola.ModoMensajes' :
         sValor= dictAux[sNombreParametro].strip()
         bHayError= not (self.Consola_ModoMensajes_Set(sValor))
+
+      # --- Consola.BeepHabilitado ----------------------------------------------------------------------------------------
+
+      elif sNombreParametro == 'Consola.BeepHabilitado' :
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Consola_BeepHabilitado_Set(sValor == 'True'))
 
       if (bHayError) :
         sTxtError+= '- ERROR: Valor de ' + sNombreParametro + ' no vlido. Valor= ' + sValor + '\n'

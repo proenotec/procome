@@ -28,7 +28,7 @@ class PROCOME_MaqEstados:
   # **** Constructor
   # ***************************************************************************************************************************
 
-  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None):
+  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None, fnCallbackBeepTransmision=None, fnCallbackBeepRecepcion=None):
 
     # **** Constantes *********************************************************************************************************
 
@@ -97,6 +97,8 @@ class PROCOME_MaqEstados:
     self._oCanalSerie= oCanalSerie
     self._oFormPpal= oFormPpal
     self._oTelegram= oTelegram
+    self._fnCallbackBeepTransmision = fnCallbackBeepTransmision
+    self._fnCallbackBeepRecepcion = fnCallbackBeepRecepcion
     self._bEstadoComunicacionAnterior= None  # Para detectar cambios de estado
 
 
@@ -126,6 +128,10 @@ class PROCOME_MaqEstados:
 
   def _ImprimirTramaTrm(self, sMensaje, lTrama):
     """Imprime una trama de transmisión según el modo configurado"""
+    # Reproducir beep de transmisión (SOL)
+    if self._fnCallbackBeepTransmision is not None:
+      self._fnCallbackBeepTransmision()
+
     if self._sModoMensajes == 'hex':
       # Modo HEX: Solo trama hexadecimal con <<<< (siempre se muestra)
       sHex = ' '.join([f'{b:02X}' for b in lTrama])
@@ -136,6 +142,10 @@ class PROCOME_MaqEstados:
 
   def _ImprimirTramaRcp(self, sMensaje, lTrama):
     """Imprime una trama de recepción según el modo configurado"""
+    # Reproducir beep de recepción (RE)
+    if self._fnCallbackBeepRecepcion is not None:
+      self._fnCallbackBeepRecepcion()
+
     if self._sModoMensajes == 'hex':
       # Modo HEX: Solo trama hexadecimal con >>>> (siempre se muestra)
       sHex = ' '.join([f'{b:02X}' for b in lTrama])

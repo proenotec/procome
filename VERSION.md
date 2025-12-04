@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.4.0
+## Versión Actual: 2.5.0
 
 ## Sistema de Versionado
 
@@ -70,6 +70,29 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v2.5.0 (2025-12-04)
+**Sistema de beeps sonoros para comunicación**
+
+Características nuevas:
+- ✨ Checkbox "Beep" en ventana de consola para activar/desactivar sonidos
+- ✨ Beep agudo (SOL - 392 Hz) cuando se transmite una trama
+- ✨ Beep grave (RE - 294 Hz) cuando se recibe una trama válida
+- ✨ Estado del checkbox se guarda en PROCOME.cfg y persiste entre sesiones
+- ✨ Reproducción de audio compatible con Linux (aplay) y Windows (winsound)
+
+Mejoras:
+- 🔧 Beeps reproducidos en threads separados (no bloquean la aplicación)
+- 🔧 Generación de WAV en memoria (16-bit PCM estéreo)
+- 🔧 Arquitectura de callbacks desde MaqEstados hasta FormPpal_Qt
+- 🔧 Manejo silencioso de errores de audio
+
+Técnico:
+- Parámetro 'Consola.BeepHabilitado' en FichConfig.py
+- Callbacks fnBeepTransmision/fnBeepRecepcion pasados por toda la cadena
+- Métodos BeepTransmision() y BeepRecepcion() en FormPpal_Qt
+- Generación de ondas sinusoidales con módulo math
+- Reproducción vía subprocess (Linux) o winsound (Windows)
 
 ### v2.4.0 (2025-12-04)
 **Selector de modo de mensajes en consola**

@@ -58,7 +58,8 @@ class ThreadTarjeta(threading.Thread):
 
   def __init__(self, iNrTarjeta, iDirRemota, bTestsHabilitados, oCSerie, oSerialLock,
                oTelegram, iDebug, fnCallbackEstado, fnCallbackMedidas, fnCallbackEstados,
-               fnCallbackDatosEquipo, fnCallbackOrden, iNrMedidas, iNrEstados, oGestor):
+               fnCallbackDatosEquipo, fnCallbackOrden, fnCallbackBeepTransmision, fnCallbackBeepRecepcion,
+               iNrMedidas, iNrEstados, oGestor):
 
     threading.Thread.__init__(self)
     self.daemon = True  # Thread daemon para que se cierre al cerrar la aplicación
@@ -83,6 +84,8 @@ class ThreadTarjeta(threading.Thread):
     self._fnCallbackEstados = fnCallbackEstados
     self._fnCallbackDatosEquipo = fnCallbackDatosEquipo
     self._fnCallbackOrden = fnCallbackOrden
+    self._fnCallbackBeepTransmision = fnCallbackBeepTransmision
+    self._fnCallbackBeepRecepcion = fnCallbackBeepRecepcion
 
     # Control de thread
     self._bRunning = False
@@ -112,7 +115,9 @@ class ThreadTarjeta(threading.Thread):
       self._oSerieWrapper,  # Usa el wrapper en lugar del puerto directo
       self,  # Este thread actúa como "FormPpal" para la máquina de estados
       iDebug,
-      oTelegram
+      oTelegram,
+      fnCallbackBeepTransmision=self._fnCallbackBeepTransmision,
+      fnCallbackBeepRecepcion=self._fnCallbackBeepRecepcion
     )
 
     # Control de tiempo
@@ -538,6 +543,8 @@ class GestorMultiTarjeta:
     self._fnCallbackEstados = None
     self._fnCallbackDatosEquipo = None
     self._fnCallbackOrden = None
+    self._fnCallbackBeepTransmision = None
+    self._fnCallbackBeepRecepcion = None
 
     # Configuración de tarjetas
     self._iNrMedidas = 35
@@ -547,13 +554,15 @@ class GestorMultiTarjeta:
     self._sModoMensajes = 'explicado'  # Modo por defecto
 
 
-  def SetCallbacks(self, fnEstado=None, fnMedidas=None, fnEstados=None, fnDatosEquipo=None, fnOrden=None):
+  def SetCallbacks(self, fnEstado=None, fnMedidas=None, fnEstados=None, fnDatosEquipo=None, fnOrden=None, fnBeepTransmision=None, fnBeepRecepcion=None):
     """Configura los callbacks para notificar al GUI"""
     self._fnCallbackEstado = fnEstado
     self._fnCallbackMedidas = fnMedidas
     self._fnCallbackEstados = fnEstados
     self._fnCallbackDatosEquipo = fnDatosEquipo
     self._fnCallbackOrden = fnOrden
+    self._fnCallbackBeepTransmision = fnBeepTransmision
+    self._fnCallbackBeepRecepcion = fnBeepRecepcion
 
 
   def SetModoMensajes(self, sModo):
@@ -599,6 +608,8 @@ class GestorMultiTarjeta:
           fnCallbackEstados=self._fnCallbackEstados,
           fnCallbackDatosEquipo=self._fnCallbackDatosEquipo,
           fnCallbackOrden=self._fnCallbackOrden,
+          fnCallbackBeepTransmision=self._fnCallbackBeepTransmision,
+          fnCallbackBeepRecepcion=self._fnCallbackBeepRecepcion,
           iNrMedidas=self._iNrMedidas,
           iNrEstados=self._iNrEstados,
           oGestor=self

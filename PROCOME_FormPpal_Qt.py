@@ -7,6 +7,11 @@
 import time
 import sys
 import os
+import math
+import struct
+import threading
+import subprocess
+import tempfile
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QPushButton,
                                QLineEdit, QComboBox, QSpinBox, QFrame, QGroupBox,
                                QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox,
@@ -74,7 +79,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.4.0"
+  _VERSION = "2.5.0"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -135,6 +140,8 @@ class FormPpal:
     self._qtConsoleText= None
     self._oConsoleCapture= None
     self._iContadorLineasConsola= 0  # Contador de escrituras en consola
+    self._bBeepHabilitado= oFichCfg._dParametros.get('Consola.BeepHabilitado', False)  # Estado del checkbox de Beep
+    self._qtCheckBoxBeep= None  # Referencia al checkbox
 
     # **** Crear la aplicación Qt y la ventana gráfica ************************************************************************
 
@@ -186,7 +193,9 @@ class FormPpal:
       fnMedidas=self._CallbackMedidas,
       fnEstados=self._CallbackEstados,
       fnDatosEquipo=self._CallbackDatosEquipo,
-      fnOrden=self._CallbackOrden
+      fnOrden=self._CallbackOrden,
+      fnBeepTransmision=self.BeepTransmision,
+      fnBeepRecepcion=self.BeepRecepcion
     )
 
     # Inicializar tarjetas según configuración
@@ -1401,6 +1410,15 @@ class FormPpal:
     btn_cerrar.clicked.connect(self._CerrarConsola)
     buttonLayout.addWidget(btn_cerrar)
 
+    # Agregar separador visual
+    buttonLayout.addSpacing(20)
+
+    # Checkbox para habilitar/deshabilitar beeps
+    self._qtCheckBoxBeep = QCheckBox('Beep')
+    self._qtCheckBoxBeep.setChecked(self._bBeepHabilitado)
+    self._qtCheckBoxBeep.stateChanged.connect(self._CambiarEstadoBeep)
+    buttonLayout.addWidget(self._qtCheckBoxBeep)
+
     mainLayout.addLayout(buttonLayout)
 
     self._oConsoleCapture = ConsoleCapture(signal_emitter=self._oSignals)
@@ -1514,6 +1532,13 @@ class FormPpal:
           f'No se pudo guardar el archivo:\n{str(e)}'
         )
 
+  def _CambiarEstadoBeep(self, state):
+    """Cambia el estado del beep cuando se modifica el checkbox"""
+    self._bBeepHabilitado = (state == Qt.CheckState.Checked.value)
+    # Guardar en configuración
+    self._oFichCfg.Consola_BeepHabilitado_Set(self._bBeepHabilitado)
+    self._oFichCfg.SalvarEnFichero()
+
   def _LimpiarConsola(self):
     """Limpia el contenido de la consola"""
     if self._qtConsoleText is not None:
@@ -1535,6 +1560,102 @@ class FormPpal:
 
     self._qtConsoleWindow = None
     self._qtConsoleText = None
+    self._qtCheckBoxBeep = None
     self._iContadorLineasConsola = 0
+
+  # ***************************************************************************************************************************
+  # **** MÉTODOS PARA BEEPS
+  # ***************************************************************************************************************************
+
+  def _GenerarBeepWAV(self, frecuencia, duracion_ms):
+    """Genera datos WAV en memoria para un beep de la frecuencia especificada"""
+    sample_rate = 44100
+    num_samples = int(sample_rate * duracion_ms / 1000.0)
+
+    # Generar onda sinusoidal
+    samples = []
+    for i in range(num_samples):
+      # Calcular valor de la muestra
+      t = float(i) / sample_rate
+      valor = int(32767.0 * 0.5 * math.sin(2.0 * math.pi * frecuencia * t))
+      # Agregar muestra (16-bit PCM, estéreo)
+      samples.append(struct.pack('<hh', valor, valor))
+
+    # Crear datos WAV en memoria
+    wav_data = bytearray()
+
+    # Header RIFF
+    wav_data.extend(b'RIFF')
+    wav_data.extend(struct.pack('<I', 36 + len(samples) * 4))  # Tamaño del archivo
+    wav_data.extend(b'WAVE')
+
+    # Subchunk fmt
+    wav_data.extend(b'fmt ')
+    wav_data.extend(struct.pack('<I', 16))  # Tamaño del subchunk
+    wav_data.extend(struct.pack('<H', 1))   # AudioFormat (1 = PCM)
+    wav_data.extend(struct.pack('<H', 2))   # NumChannels (2 = estéreo)
+    wav_data.extend(struct.pack('<I', sample_rate))
+    wav_data.extend(struct.pack('<I', sample_rate * 4))  # ByteRate (2 canales * 2 bytes)
+    wav_data.extend(struct.pack('<H', 4))   # BlockAlign
+    wav_data.extend(struct.pack('<H', 16))  # BitsPerSample
+
+    # Subchunk data
+    wav_data.extend(b'data')
+    wav_data.extend(struct.pack('<I', len(samples) * 4))
+    for sample in samples:
+      wav_data.extend(sample)
+
+    return bytes(wav_data)
+
+  def _ReproducirBeepAsync(self, frecuencia):
+    """Reproduce un beep de forma asíncrona (no bloqueante)"""
+    def reproducir():
+      try:
+        # Generar WAV data
+        wav_data = self._GenerarBeepWAV(frecuencia, 100)  # 100ms de duración
+
+        # Reproducir según el sistema operativo
+        if sys.platform == 'win32':
+          # Windows: usar winsound con el WAV en memoria
+          import winsound
+          winsound.PlaySound(wav_data, winsound.SND_MEMORY)
+        else:
+          # Linux/Mac: crear archivo temporal y usar aplay/afplay
+          with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+            temp_file.write(wav_data)
+            temp_filename = temp_file.name
+
+          if sys.platform.startswith('linux'):
+            subprocess.run(['aplay', '-q', temp_filename],
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL,
+                          timeout=1)
+          elif sys.platform == 'darwin':
+            subprocess.run(['afplay', temp_filename],
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL,
+                          timeout=1)
+
+          # Eliminar archivo temporal
+          os.unlink(temp_filename)
+
+      except Exception as e:
+        pass  # Silenciar errores de reproducción de audio
+
+    # Ejecutar en thread separado para no bloquear
+    thread = threading.Thread(target=reproducir, daemon=True)
+    thread.start()
+
+  def BeepTransmision(self):
+    """Beep para transmisión (SOL - 392 Hz)"""
+    if self._bBeepHabilitado:
+      print("[DEBUG BEEP] Transmisión")
+      self._ReproducirBeepAsync(392)
+
+  def BeepRecepcion(self):
+    """Beep para recepción (RE - 294 Hz)"""
+    if self._bBeepHabilitado:
+      print("[DEBUG BEEP] Recepción")
+      self._ReproducirBeepAsync(294)
 
 # #############################################################################################################################
