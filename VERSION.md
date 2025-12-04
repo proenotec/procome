@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.2.1
+## Versión Actual: 2.3.0
 
 ## Sistema de Versionado
 
@@ -70,6 +70,35 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v2.3.0 (2025-12-03)
+**Versión Qt exclusiva con mejoras en consola**
+
+Cambios importantes:
+- 🗑️ Eliminada versión Tkinter (solo Qt desde ahora)
+- ✨ Botón "Guardar" en ventana de consola
+- ✨ Botón maximizar funcional en ventana de consola
+
+Características nuevas:
+- ✨ Guardar contenido completo de consola en archivo de texto
+- ✨ Nombre de archivo con timestamp automático
+- ✨ Diálogo de confirmación al guardar
+- ✨ Ventana de consola totalmente redimensionable
+
+Mejoras:
+- 🔧 Ventana de consola con botones minimizar/maximizar/cerrar
+- 🔧 Interfaz más limpia con 3 botones: Guardar, Limpiar, Cerrar
+- 🔧 Mejor usabilidad de la ventana de consola
+
+Archivos eliminados:
+- PROCOME_FormPpal.py (versión Tkinter)
+- PROCOME_Arranque.py (lanzador Tkinter)
+- procome (script wrapper)
+
+Técnico:
+- WindowFlags configurados para ventana completa
+- QFileDialog para guardar archivos
+- Formato UTF-8 en archivos guardados
 
 ### v2.2.1 (2025-12-03)
 **Mejora en tiempo de reconexión**

@@ -74,7 +74,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.2.1"
+  _VERSION = "2.3.0"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -1338,6 +1338,13 @@ class FormPpal:
 
     self._qtConsoleWindow = QDialog(self._qtWindow)
     self._qtConsoleWindow.setWindowTitle(f'Consola - 0/{self._iMaxLineasConsola} líneas')
+    # Habilitar botones de minimizar, maximizar y cerrar
+    self._qtConsoleWindow.setWindowFlags(
+      Qt.WindowType.Window |
+      Qt.WindowType.WindowMinimizeButtonHint |
+      Qt.WindowType.WindowMaximizeButtonHint |
+      Qt.WindowType.WindowCloseButtonHint
+    )
     self._qtConsoleWindow.finished.connect(self._LimpiarRecursosConsola)
 
     mainLayout = QVBoxLayout(self._qtConsoleWindow)
@@ -1348,6 +1355,11 @@ class FormPpal:
     mainLayout.addWidget(self._qtConsoleText)
 
     buttonLayout = QHBoxLayout()
+
+    btn_guardar = QPushButton('Guardar')
+    btn_guardar.setStyleSheet("background-color: #90EE90; color: black;")
+    btn_guardar.clicked.connect(self._GuardarConsola)
+    buttonLayout.addWidget(btn_guardar)
 
     btn_limpiar = QPushButton('Limpiar')
     btn_limpiar.setStyleSheet("background-color: #FFB6C1; color: black;")
@@ -1428,6 +1440,49 @@ class FormPpal:
       if self._iContadorLineasConsola % 10 == 0 or self._iContadorLineasConsola == 1:
         if self._qtConsoleWindow is not None:
           self._qtConsoleWindow.setWindowTitle(f'Consola - {self._iContadorLineasConsola}/{self._iMaxLineasConsola} líneas')
+
+  def _GuardarConsola(self):
+    """Guarda el contenido de la consola en un archivo"""
+    if self._qtConsoleText is None:
+      return
+
+    from PySide6.QtWidgets import QFileDialog
+    from datetime import datetime
+
+    # Generar nombre de archivo por defecto con fecha y hora
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nombre_por_defecto = f"consola_procome_{timestamp}.txt"
+
+    # Abrir diálogo de guardar archivo
+    archivo, _ = QFileDialog.getSaveFileName(
+      self._qtConsoleWindow,
+      "Guardar contenido de consola",
+      nombre_por_defecto,
+      "Archivos de texto (*.txt);;Todos los archivos (*.*)"
+    )
+
+    if archivo:
+      try:
+        # Obtener todo el texto de la consola
+        contenido = self._qtConsoleText.toPlainText()
+
+        # Guardar en archivo
+        with open(archivo, 'w', encoding='utf-8') as f:
+          f.write(contenido)
+
+        print(f"[CONSOLA] Contenido guardado en: {archivo}")
+        QMessageBox.information(
+          self._qtConsoleWindow,
+          'Guardado exitoso',
+          f'Contenido de consola guardado en:\n{archivo}'
+        )
+      except Exception as e:
+        print(f"[ERROR] No se pudo guardar la consola: {e}")
+        QMessageBox.critical(
+          self._qtConsoleWindow,
+          'Error al guardar',
+          f'No se pudo guardar el archivo:\n{str(e)}'
+        )
 
   def _LimpiarConsola(self):
     """Limpia el contenido de la consola"""
