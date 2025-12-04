@@ -79,7 +79,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.5.0"
+  _VERSION = "2.5.1"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -1649,13 +1649,11 @@ class FormPpal:
   def BeepTransmision(self):
     """Beep para transmisión (SOL - 392 Hz)"""
     if self._bBeepHabilitado:
-      print("[DEBUG BEEP] Transmisión")
       self._ReproducirBeepAsync(392)
 
   def BeepRecepcion(self):
     """Beep para recepción (RE - 294 Hz)"""
     if self._bBeepHabilitado:
-      print("[DEBUG BEEP] Recepción")
       self._ReproducirBeepAsync(294)
 
 # #############################################################################################################################

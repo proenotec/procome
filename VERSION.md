@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.5.0
+## Versión Actual: 2.5.1
 
 ## Sistema de Versionado
 
@@ -70,6 +70,18 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v2.5.1 (2025-12-04)
+**Eliminación de mensajes de debug**
+
+Mejoras:
+- 🔧 Eliminados mensajes de debug "[DEBUG BEEP] Transmisión" y "[DEBUG BEEP] Recepción"
+- 🔧 Consola más limpia sin mensajes innecesarios
+- 🔧 Funcionalidad de beeps se mantiene sin cambios
+
+Técnico:
+- Removidos print statements de debug en BeepTransmision() y BeepRecepcion()
+- Actualizado instalador install.sh a versión 2.5.1
 
 ### v2.5.0 (2025-12-04)
 **Sistema de beeps sonoros para comunicación**
