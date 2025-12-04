@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.3.0
+## Versión Actual: 2.4.0
 
 ## Sistema de Versionado
 
@@ -70,6 +70,29 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v2.4.0 (2025-12-04)
+**Selector de modo de mensajes en consola**
+
+Características nuevas:
+- ✨ Selector "Modo de los mensajes en consola" en configuración
+- ✨ Modo "Solo protocolo HEX": muestra solo tramas hexadecimales con prefijos <<<< y >>>>
+- ✨ Modo "Protocolo explicado": muestra mensajes detallados como hasta ahora
+- ✨ Configuración se guarda en PROCOME.cfg y persiste entre sesiones
+
+Mejoras:
+- 🔧 Supresión completa de mensajes debug/estado en modo HEX
+- 🔧 Supresión de mensajes [LECTOR] de errores de recepción en modo HEX
+- 🔧 Supresión de mensajes de estado de threads en modo HEX
+- 🔧 Modo se aplica automáticamente a todas las tarjetas
+- 🔧 Modo se mantiene al reiniciar comunicación
+
+Técnico:
+- Parámetro 'Consola.ModoMensajes' en FichConfig.py con validación
+- Método SetModoMensajes() en gestor y máquina de estados
+- Variable _sModoMensajes almacenada en gestor para aplicar a threads nuevos
+- Checks condicionales en todos los print statements según modo
+- Métodos _ImprimirTramaTrm() y _ImprimirTramaRcp() en máquina de estados
 
 ### v2.3.0 (2025-12-03)
 **Versión Qt exclusiva con mejoras en consola**

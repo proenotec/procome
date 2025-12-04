@@ -74,7 +74,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.3.0"
+  _VERSION = "2.4.0"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -191,6 +191,11 @@ class FormPpal:
 
     # Inicializar tarjetas según configuración
     self._oGestorTarjetas.InicializarTarjetas()
+
+    # Configurar modo de mensajes inicial desde configuración
+    dCfg = self._oFichCfg.Parametros_Get()
+    sModoMensajes = dCfg.get('Consola.ModoMensajes', 'explicado')
+    self._oGestorTarjetas.SetModoMensajes(sModoMensajes)
 
     # **** Arrancar el temporizado del bucle periodico *************************************************************************
 
@@ -1227,6 +1232,7 @@ class FormPpal:
 
     dCfg = self._oFichCfg.Parametros_Get()
     iMaxLineasActual = dCfg.get('Consola.MaxLineas', 5000)
+    sModoMensajesActual = dCfg.get('Consola.ModoMensajes', 'explicado')
 
     mainLayout = QVBoxLayout(dVentanaCfgConsola)
     frm_principal = QWidget()
@@ -1250,6 +1256,21 @@ class FormPpal:
     sbx_maxlineas.setValue(iMaxLineasActual)
     gridLayout.addWidget(sbx_maxlineas, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
+    # Modo de mensajes
+    lbl_modo = QLabel('Modo de los mensajes en consola:')
+    lbl_modo.setStyleSheet("color: black;")
+    gridLayout.addWidget(lbl_modo, 2, 0, Qt.AlignmentFlag.AlignRight)
+
+    cmb_modo = QComboBox()
+    cmb_modo.addItem('Protocolo explicado', 'explicado')
+    cmb_modo.addItem('Solo protocolo HEX', 'hex')
+    # Seleccionar el modo actual
+    if sModoMensajesActual == 'hex':
+      cmb_modo.setCurrentIndex(1)
+    else:
+      cmb_modo.setCurrentIndex(0)
+    gridLayout.addWidget(cmb_modo, 2, 1, Qt.AlignmentFlag.AlignLeft)
+
     # Texto informativo
     lbl_info = QLabel(
       'Nota: Un valor alto (>10000) puede causar problemas de rendimiento.\n'
@@ -1258,10 +1279,13 @@ class FormPpal:
       '  • 1000-2000: Sistemas con poca RAM\n'
       '  • 5000: Balance óptimo (recomendado)\n'
       '  • 10000+: Si necesitas mucho historial\n\n'
+      'Modo de mensajes:\n'
+      '  • Protocolo explicado: Muestra detalles completos (por defecto)\n'
+      '  • Solo protocolo HEX: Solo tramas hexadecimales (<<<< / >>>>)\n\n'
       'Los cambios se aplican inmediatamente sin reiniciar.'
     )
     lbl_info.setStyleSheet("color: #666666; font-size: 9pt;")
-    gridLayout.addWidget(lbl_info, 2, 0, 1, 2)
+    gridLayout.addWidget(lbl_info, 3, 0, 1, 2)
 
     # Botones
     buttonLayout = QHBoxLayout()
@@ -1269,6 +1293,7 @@ class FormPpal:
     def _GuardarCfgConsola():
       try:
         iMaxLineas = sbx_maxlineas.value()
+        sModoMensajes = cmb_modo.currentData()
 
         if iMaxLineas < 20 or iMaxLineas > 100000:
           QMessageBox.critical(dVentanaCfgConsola, 'Error',
@@ -1277,13 +1302,18 @@ class FormPpal:
 
         # Guardar en configuración
         self._oFichCfg.Consola_MaxLineas_Set(iMaxLineas)
+        self._oFichCfg.Consola_ModoMensajes_Set(sModoMensajes)
         self._oFichCfg.SalvarEnFichero()
 
-        # Aplicar cambio inmediatamente
+        # Aplicar cambios inmediatamente
         self._iMaxLineasConsola = iMaxLineas
 
+        # Actualizar modo de mensajes en todas las tarjetas
+        self._oGestorTarjetas.SetModoMensajes(sModoMensajes)
+
+        sModo = 'Protocolo explicado' if sModoMensajes == 'explicado' else 'Solo protocolo HEX'
         QMessageBox.information(dVentanaCfgConsola, 'Información',
-          f'Configuración guardada.\nNuevo límite: {iMaxLineas} líneas.')
+          f'Configuración guardada.\nNuevo límite: {iMaxLineas} líneas\nModo: {sModo}')
 
         dVentanaCfgConsola.accept()
       except Exception as e:

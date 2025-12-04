@@ -68,7 +68,8 @@ class FichConfig:
                          'Tarjeta6.DirRemota'        : 6,
                          'Tarjeta6.TestsHabilitados' : False,
                          # Configuración de la consola
-                         'Consola.MaxLineas'         : 5000
+                         'Consola.MaxLineas'         : 5000,
+                         'Consola.ModoMensajes'      : 'explicado'  # 'explicado' o 'hex'
                        }
     self._sNombreFich= self._sNombreFich_Def
     
@@ -185,8 +186,15 @@ class FichConfig:
   # *** Parametro= Consola.MaxLineas ******************************************************************************************
 
   def Consola_MaxLineas_Set(self, Valor):
-    if ((type(Valor) != int) or (Valor < 100) or (Valor > 100000)) : return False
+    if ((type(Valor) != int) or (Valor < 20) or (Valor > 100000)) : return False
     self._dParametros['Consola.MaxLineas']= Valor
+    return True
+
+  # *** Parametro= Consola.ModoMensajes ****************************************************************************************
+
+  def Consola_ModoMensajes_Set(self, Valor):
+    if ((type(Valor) != str) or (Valor not in ['explicado', 'hex'])) : return False
+    self._dParametros['Consola.ModoMensajes']= Valor
     return True
 
 
@@ -343,6 +351,8 @@ class FichConfig:
 
     esteApartado = documento.createElement('Consola')
     sNombreParametro= 'Consola.MaxLineas'
+    esteApartado.setAttribute(sNombreParametro.split('.')[1], str(self._dParametros[sNombreParametro]))
+    sNombreParametro= 'Consola.ModoMensajes'
     esteApartado.setAttribute(sNombreParametro.split('.')[1], str(self._dParametros[sNombreParametro]))
     raiz.appendChild(esteApartado)
 
@@ -559,6 +569,12 @@ class FichConfig:
       elif sNombreParametro == 'Consola.MaxLineas' :
         sValor= dictAux[sNombreParametro].strip()
         bHayError= not (self.Consola_MaxLineas_Set(int(sValor)))
+
+      # --- Consola.ModoMensajes ----------------------------------------------------------------------------------------------
+
+      elif sNombreParametro == 'Consola.ModoMensajes' :
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Consola_ModoMensajes_Set(sValor))
 
       if (bHayError) :
         sTxtError+= '- ERROR: Valor de ' + sNombreParametro + ' no vlido. Valor= ' + sValor + '\n'

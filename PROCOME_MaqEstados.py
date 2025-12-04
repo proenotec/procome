@@ -78,6 +78,9 @@ class PROCOME_MaqEstados:
     self._bVerMensDbg_MensajeTrm=  ((iMostrarMensajesDebug & 0x08) != 0)
     self._bVerMensDbg_TipoMensRcp= ((iMostrarMensajesDebug & 0x10) != 0)
     self._bVerMensDbg_MensajeRcp=  ((iMostrarMensajesDebug & 0x20) != 0)
+
+    # Modo de visualización de mensajes ('explicado' o 'hex')
+    self._sModoMensajes = 'explicado'
     #
     self._bVerMensDbg_DEBUG     =  ((iMostrarMensajesDebug & 0x80) != 0)
 
@@ -111,11 +114,48 @@ class PROCOME_MaqEstados:
   # Devuelve:
   # - Un texto nulo: Si es una salida sin error y sin nada particular que informar
   # - Un texto con la descripcin de un error
-  
+
+  # ***************************************************************************************************************************
+  # *** Métodos públicos
+  # ***************************************************************************************************************************
+
+  def SetModoMensajes(self, sModo):
+    """Establece el modo de visualización de mensajes ('explicado' o 'hex')"""
+    if sModo in ['explicado', 'hex']:
+      self._sModoMensajes = sModo
+
+  def _ImprimirTramaTrm(self, sMensaje, lTrama):
+    """Imprime una trama de transmisión según el modo configurado"""
+    if self._sModoMensajes == 'hex':
+      # Modo HEX: Solo trama hexadecimal con <<<< (siempre se muestra)
+      sHex = ' '.join([f'{b:02X}' for b in lTrama])
+      print(f'<<<< {sHex}')
+    elif self._bVerMensDbg_MensajeTrm:
+      # Modo explicado: Mensaje completo (solo si debug activado)
+      PROCOME_General.ImprimirTrama_Hex(sMensaje, lTrama)
+
+  def _ImprimirTramaRcp(self, sMensaje, lTrama):
+    """Imprime una trama de recepción según el modo configurado"""
+    if self._sModoMensajes == 'hex':
+      # Modo HEX: Solo trama hexadecimal con >>>> (siempre se muestra)
+      sHex = ' '.join([f'{b:02X}' for b in lTrama])
+      print(f'>>>> {sHex}')
+    elif self._bVerMensDbg_MensajeRcp:
+      # Modo explicado: Mensaje completo (solo si debug activado)
+      PROCOME_General.ImprimirTrama_Hex(sMensaje, lTrama)
+
+  def _MostrarMensajesExplicados(self):
+    """Retorna True si se deben mostrar mensajes explicativos (no modo HEX)"""
+    return self._sModoMensajes != 'hex'
+
+  # ***************************************************************************************************************************
+  # *** Procesamiento de eventos
+  # ***************************************************************************************************************************
+
   def ProcesarEventos(self, sEvento, xDato= None):
 
-    if (self._bVerMensDbg_Evento or self._bVerMensDbg_Estado) : 
-      print('====================================================================================================') 
+    if ((self._bVerMensDbg_Evento or self._bVerMensDbg_Estado) and self._MostrarMensajesExplicados()) :
+      print('====================================================================================================')
       sTexto=''
       if (self._bVerMensDbg_Evento) : sTexto+= 'Evento= <' + sEvento + '>'
       if (self._bVerMensDbg_Evento and self._bVerMensDbg_Estado) : sTexto+= '.'
@@ -168,7 +208,7 @@ class PROCOME_MaqEstados:
 
     while(sEvento != 'Procesado') :
 
-      if (self._bVerMensDbg_Evento or self._bVerMensDbg_Estado) : 
+      if ((self._bVerMensDbg_Evento or self._bVerMensDbg_Estado) and self._MostrarMensajesExplicados()) :
         if (sEvento != sEventoBackup) :
           sTexto=''
           if (self._bVerMensDbg_Evento) : sTexto+= 'Evento= <' + sEvento + '>'
@@ -266,8 +306,8 @@ class PROCOME_MaqEstados:
             self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
             self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
             self._TransmitirTrama()
-            if (self._bVerMensDbg_TipoMensTrm) : print(self._lEstado[0] + ': Transmitido un mensaje de "Reset de linea remota"')
-            if (self._bVerMensDbg_MensajeTrm)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaTrm)
+            if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Reset de linea remota"')
+            if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
             self._sEstadoCom= 'EspRcp'
             sEvento= 'Procesado'
 
@@ -283,8 +323,8 @@ class PROCOME_MaqEstados:
             
               if (iFuncion == PROCOME_General.PROCOME_CONFIRM_NACK) :
                 self._dTemp['TmpRcp_seg']= 0
-                if (self._bVerMensDbg_TipoMensRcp) : print('Recibido un NACK (CONFIRM)"')
-                if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
+                if (self._bVerMensDbg_TipoMensRcp and self._MostrarMensajesExplicados()) : print('Recibido un NACK (CONFIRM)"')
+                if (self._bVerMensDbg_MensajeRcp)  : self._ImprimirTramaRcp('  Mensaje:', self._lTramaRcp)
                 self._lEstado= ['Enlace', 'SinComunicacion']
                 self._sEstadoCom= 'Reposo'
                 self._dTemp['TmpEspera_seg']= 1.0  # Reintentar cada 1 segundo
@@ -296,12 +336,12 @@ class PROCOME_MaqEstados:
                 # Marcar que ha comunicado exitosamente al menos una vez
                 self._bHaComunicadoAlgunaVez= True
                 if (bBitACD) :
-                  if (self._bVerMensDbg_TipoMensRcp) : print('Recibido un ACK (CONFIRM) con ACD= 1')
-                  if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
+                  if (self._bVerMensDbg_TipoMensRcp and self._MostrarMensajesExplicados()) : print('Recibido un ACK (CONFIRM) con ACD= 1')
+                  if (self._bVerMensDbg_MensajeRcp)  : self._ImprimirTramaRcp('  Mensaje:', self._lTramaRcp)
                   self._lEstado= ['Enlace', 'VaciarBufferClase1']
                 else :
-                  if (self._bVerMensDbg_TipoMensRcp) : print('Recibido un ACK (CONFIRM) con ACD= 0')
-                  if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
+                  if (self._bVerMensDbg_TipoMensRcp and self._MostrarMensajesExplicados()) : print('Recibido un ACK (CONFIRM) con ACD= 0')
+                  if (self._bVerMensDbg_MensajeRcp)  : self._ImprimirTramaRcp('  Mensaje:', self._lTramaRcp)
                   self._lEstado= ['Inicializacion', 'Sincronizacion']
                 #  
                 self._sEstadoCom= 'PrepTrm'
@@ -331,7 +371,8 @@ class PROCOME_MaqEstados:
           # **** Evento: 'TimeoutEspera' **************************************************************************************
 
           if (sEvento == 'TimeoutEspera') :
-            print('Enlace: Reintentando conexión...')
+            if self._MostrarMensajesExplicados():
+              print('Enlace: Reintentando conexión...')
             self._lEstado= ['Enlace', 'RstLinRemota']
             self._sEstadoCom= 'PrepTrm'
             sEvento= 'ProcesarDeNuevo'
@@ -463,7 +504,8 @@ class PROCOME_MaqEstados:
             sEvento= 'Procesado'
             
           elif (sEvento == 'TimeoutSincrPer') :
-            print(self._dTemp)
+            if self._MostrarMensajesExplicados():
+              print(self._dTemp)
             self._ArrancarEnvioSincr= True
             self._dTemp['TmpSincr_seg']= self._K_fTmoSincrPeriodica_seg
             sEvento= 'Procesado'
@@ -624,14 +666,14 @@ class PROCOME_MaqEstados:
             sTxtAux= 'Enviada orden: Orden S' + str(self._DatosOrden[0] + 1) + ', operación ' + self._DatosOrden[1]
             self._oFormPpal._Ordenes_MostrarMensaje(sTxtAux)
             #
-            if (self._bVerMensDbg_TipoMensTrm) :
+            if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) :
               sTexto= self._lEstado[0] + ': Transmitido un mensaje de "Petición de orden" para dar una orden de '
               if (self._lTramaTrm[-3] == 1) :
                 sTexto+= 'Abrir'
-              else : 
+              else :
                 sTexto+= 'Cerrar'
               print(sTexto + ' al relé con NrOrden ' + str(self._lTramaTrm[-5]))
-            if (self._bVerMensDbg_MensajeTrm)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaTrm)
+            if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
             self._sEstadoCom= 'EspRcp'
             sEvento= 'Procesado'
 
@@ -649,7 +691,7 @@ class PROCOME_MaqEstados:
                 self._dTemp['TmpRcp_seg']= 0
                 self._bBitFCB= not self._bBitFCB
                 #
-                if (self._bVerMensDbg_TipoMensRcp) : 
+                if (self._bVerMensDbg_TipoMensRcp and self._MostrarMensajesExplicados()) :
                   sTxtAux= 'Recibido un "'
                   if (iFuncion == PROCOME_General.PROCOME_CONFIRM_ACK) :
                     sTxtAux+= 'ACK'
@@ -661,7 +703,7 @@ class PROCOME_MaqEstados:
                   else :
                     sTxtAux+= '0'
                   print(sTxtAux)                 
-                if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
+                if (self._bVerMensDbg_MensajeRcp)  : self._ImprimirTramaRcp('  Mensaje:', self._lTramaRcp)
                 #
                 self._lEstado= ['Bucle', 'TiempoLibre']
                 self._sEstadoCom= 'Reposo'
@@ -751,7 +793,7 @@ class PROCOME_MaqEstados:
     # ==== Final de la funcin
     # =========================================================================================================================
 
-    if (self._bVerMensDbg_Evento or self._bVerMensDbg_Estado) :
+    if ((self._bVerMensDbg_Evento or self._bVerMensDbg_Estado) and self._MostrarMensajesExplicados()) :
       sTexto=''
       if (self._bVerMensDbg_Evento) : sTexto+= 'Evento= <' + sEvento + '>'
       if (self._bVerMensDbg_Evento and self._bVerMensDbg_Estado) : sTexto+= '.'
@@ -831,10 +873,10 @@ class PROCOME_MaqEstados:
 
 
   def _RecibidoMensajeNoEsperado(self, lEstado, lTrama):
-    if (self._bVerMensDbg_TipoMensRcp or self._bVerMensDbg_MensRcp) :
+    if ((self._bVerMensDbg_TipoMensRcp or self._bVerMensDbg_MensRcp) and self._MostrarMensajesExplicados()) :
       print('Recibido un mensaje no esperado. Se ignora')
       print('- Estado= '  + lEstado[0] + '.' + lEstado[1])
-      PROCOME_General.ImprimirTrama_Hex('- Mensaje: ', lTrama)
+      self._ImprimirTramaRcp('- Mensaje: ', lTrama)
       return
 
 
@@ -865,8 +907,8 @@ class PROCOME_MaqEstados:
       self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
       self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
       self._TransmitirTrama()
-      if (self._bVerMensDbg_TipoMensTrm) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de datos de clase 1"')
-      if (self._bVerMensDbg_MensajeTrm)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaTrm)
+      if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de datos de clase 1"')
+      if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
       self._sEstadoCom= 'EspRcp'
       return 'Procesado'
 
@@ -884,8 +926,8 @@ class PROCOME_MaqEstados:
           self._dTemp['TmpRcp_seg']= 0
           self._bBitFCB= not self._bBitFCB
           #
-          if (self._bVerMensDbg_TipoMensRcp) :
-            sTexto= 'Recibido un mensaje con ' 
+          if (self._bVerMensDbg_TipoMensRcp and self._MostrarMensajesExplicados()) :
+            sTexto= 'Recibido un mensaje con '
             if (iFuncion == PROCOME_General.PROCOME_RESPOND_DATOSUSUARIO) :
               sTexto+= 'Datos de usuario (RESPOND),'
             else :
@@ -893,7 +935,7 @@ class PROCOME_MaqEstados:
             sTexto+= ' con ACD= '
             sTexto+= '1' if (bBitACD) else '0'
             print(sTexto)
-          if (self._bVerMensDbg_MensajeRcp) : PROCOME_General.ImprimirTrama_Hex('Mensaje: ', self._lTramaRcp)
+          if (self._bVerMensDbg_MensajeRcp) : self._ImprimirTramaRcp('Mensaje: ', self._lTramaRcp)
           #
           if (bBitACD) :
             self._sEstadoCom= 'PrepTrm'
@@ -953,8 +995,8 @@ class PROCOME_MaqEstados:
       self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
       self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
       self._TransmitirTrama()
-      if (self._bVerMensDbg_TipoMensTrm) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de datos de control (medidas)"')
-      if (self._bVerMensDbg_MensajeTrm)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaTrm)
+      if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de datos de control (medidas)"')
+      if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
       self._sEstadoCom= 'EspRcp'
       return 'Procesado'
 
@@ -973,11 +1015,11 @@ class PROCOME_MaqEstados:
           self._dTemp['TmpRcp_seg']= 0
           self._bBitFCB= not self._bBitFCB
           #
-          if (self._bVerMensDbg_TipoMensRcp) : 
+          if (self._bVerMensDbg_TipoMensRcp and self._MostrarMensajesExplicados()) :
             sTexto= 'Recibido un mensaje de "Transmisión de medidas y cambios digitales de control" con ACD= '
             sTexto+= '1' if (bBitACD) else '0'
             print(sTexto)
-          if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
+          if (self._bVerMensDbg_MensajeRcp)  : self._ImprimirTramaRcp('  Mensaje:', self._lTramaRcp)
           #
           if (bBitACD) :
             self._lEstado=     dCambiosDeEstado['ACD1']['Estado']
@@ -1042,8 +1084,8 @@ class PROCOME_MaqEstados:
       self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
       self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
       self._TransmitirTrama()
-      if (self._bVerMensDbg_TipoMensTrm) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de estados digitales de control"')
-      if (self._bVerMensDbg_MensajeTrm)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaTrm)
+      if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de estados digitales de control"')
+      if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
       self._sEstadoCom= 'EspRcp'
       return 'Procesado'
 
@@ -1062,11 +1104,11 @@ class PROCOME_MaqEstados:
           self._dTemp['TmpRcp_seg']= 0
           self._bBitFCB= not self._bBitFCB
           #
-          if (self._bVerMensDbg_TipoMensRcp) : 
+          if (self._bVerMensDbg_TipoMensRcp and self._MostrarMensajesExplicados()) :
             sTexto= 'Recibido un mensaje de "Transmisión de estados digitales de control" con ACD= '
             sTexto+= '1' if (bBitACD) else '0'
             print(sTexto)
-          if (self._bVerMensDbg_MensajeRcp)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaRcp)
+          if (self._bVerMensDbg_MensajeRcp)  : self._ImprimirTramaRcp('  Mensaje:', self._lTramaRcp)
           #
           if (bBitACD) :
             self._lEstado=     dCambiosDeEstado['ACD1']['Estado']
@@ -1127,8 +1169,8 @@ class PROCOME_MaqEstados:
       self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
       self._dTemp['TmpRcp_seg']= 0
       self._dTemp['TmpEspera_seg']= 0.1    # Darle un tiempo para no mandar 2 mensajes seguidos
-      if (self._bVerMensDbg_TipoMensTrm) : print(self._lEstado[0] + ': Transmitido un mensaje de "Sincronizacion universal"')
-      if (self._bVerMensDbg_MensajeTrm)  : PROCOME_General.ImprimirTrama_Hex('  Mensaje:', self._lTramaTrm)
+      if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Sincronizacion universal"')
+      if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
       self._TransmitirTrama()
       self._sEstadoCom= 'Reposo'
       return 'Procesado'

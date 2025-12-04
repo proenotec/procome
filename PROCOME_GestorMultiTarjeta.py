@@ -144,13 +144,15 @@ class ThreadTarjeta(threading.Thread):
         time.sleep(0.02)  # 20ms por iteración
 
       except Exception as e:
-        # Mostrar error pero continuar ejecutando
-        print(f'[Tarjeta {self._iNrTarjeta}] ERROR en thread: {str(e)}')
+        # Mostrar error pero continuar ejecutando (solo en modo explicado)
+        if self._oGestor._sModoMensajes != 'hex':
+          print(f'[Tarjeta {self._iNrTarjeta}] ERROR en thread: {str(e)}')
         # Pequeña pausa para evitar loop infinito en caso de error persistente
         time.sleep(0.1)
 
-    # Al salir del bucle, notificar que el thread ha terminado
-    print(f'[Tarjeta {self._iNrTarjeta}] Thread finalizado')
+    # Al salir del bucle, notificar que el thread ha terminado (solo en modo explicado)
+    if self._oGestor._sModoMensajes != 'hex':
+      print(f'[Tarjeta {self._iNrTarjeta}] Thread finalizado')
 
 
   def _ProcesarEventosPendientes(self):
@@ -172,13 +174,15 @@ class ThreadTarjeta(threading.Thread):
 
           # Filtrar PetOrden si la tarjeta no está comunicando (estado 0)
           if sEvento == 'PetOrden' and self._oMaqEstados.Comunicando() == 0:
-            print(f'[Tarjeta {self._iNrTarjeta}] Orden ignorada: tarjeta sin comunicación')
+            if self._oGestor._sModoMensajes != 'hex':
+              print(f'[Tarjeta {self._iNrTarjeta}] Orden ignorada: tarjeta sin comunicación')
             continue
 
           # Intentar adquirir el lock con timeout para evitar bloqueos indefinidos
           bLockAdquirido = self._oSerialLock.acquire(timeout=2.0)
           if not bLockAdquirido:
-            print(f'[Tarjeta {self._iNrTarjeta}] TIMEOUT esperando lock serial para {sEvento}')
+            if self._oGestor._sModoMensajes != 'hex':
+              print(f'[Tarjeta {self._iNrTarjeta}] TIMEOUT esperando lock serial para {sEvento}')
             continue
 
           try:
@@ -219,7 +223,8 @@ class ThreadTarjeta(threading.Thread):
           self._ProcesarRespuestaMaqEstados(Rta)
       except Exception as e:
         # Solo mostrar error si no es por puerto cerrado (situación esperada al parar)
-        if 'not open' not in str(e):
+        # y si no estamos en modo HEX
+        if 'not open' not in str(e) and self._oGestor._sModoMensajes != 'hex':
           print(f'[Tarjeta {self._iNrTarjeta}] ERROR procesando evento {sEvento}: {str(e)}')
 
 
@@ -277,8 +282,8 @@ class ThreadTarjeta(threading.Thread):
             iContadorErrores += 1
             self._oConstrTramaRcp.Reset()
         else:
-          # Si había errores acumulados, mostrar resumen
-          if iContadorErrores > 0:
+          # Si había errores acumulados, mostrar resumen (solo en modo explicado)
+          if iContadorErrores > 0 and self._oGestor._sModoMensajes != 'hex':
             print(f'[LECTOR] {iContadorErrores} errores de recepción')
             iContadorErrores = 0
 
@@ -290,13 +295,15 @@ class ThreadTarjeta(threading.Thread):
           for oThread in self._oGestor._lThreads:
             oThread._qTramas.put(lTramaRcp)
 
-      # Mostrar resumen final si había errores
-      if iContadorErrores > 0:
+      # Mostrar resumen final si había errores (solo en modo explicado)
+      if iContadorErrores > 0 and self._oGestor._sModoMensajes != 'hex':
         print(f'[LECTOR] {iContadorErrores} errores de recepción acumulados')
 
     except Exception as e:
       # Solo mostrar error si no es por descriptor cerrado (esperado al parar)
-      if 'Descriptor' not in str(e) and 'descriptor' not in str(e):
+      # y si no estamos en modo HEX
+      if ('Descriptor' not in str(e) and 'descriptor' not in str(e) and
+          self._oGestor._sModoMensajes != 'hex'):
         print(f'[LECTOR] ERROR en _LeerYDistribuirTramas: {str(e)}')
 
 
@@ -355,7 +362,8 @@ class ThreadTarjeta(threading.Thread):
         self._ProcesarRespuestaMaqEstados(Rta)
 
     except Exception as e:
-      print(f'[Tarjeta {self._iNrTarjeta}] ERROR en _ProcesarTramasDeCola: {str(e)}')
+      if self._oGestor._sModoMensajes != 'hex':
+        print(f'[Tarjeta {self._iNrTarjeta}] ERROR en _ProcesarTramasDeCola: {str(e)}')
 
 
   def _ActualizarTemporizadores(self):
@@ -417,8 +425,8 @@ class ThreadTarjeta(threading.Thread):
 
   def _ProcesarRespuestaMaqEstados(self, sRespuesta):
     """Procesa respuestas de la máquina de estados"""
-    # Mostrar solo errores críticos
-    if sRespuesta != '' and 'ERROR' in sRespuesta.upper():
+    # Mostrar solo errores críticos (solo en modo explicado)
+    if sRespuesta != '' and 'ERROR' in sRespuesta.upper() and self._oGestor._sModoMensajes != 'hex':
       print(f'[Tarjeta {self._iNrTarjeta}] {sRespuesta}')
 
     # Detectar cambios en el estado de comunicación (0=sin comunicación, 1=intentando, 2=comunicando)
@@ -535,6 +543,9 @@ class GestorMultiTarjeta:
     self._iNrMedidas = 35
     self._iNrEstados = 64
 
+    # Modo de visualización de mensajes en consola
+    self._sModoMensajes = 'explicado'  # Modo por defecto
+
 
   def SetCallbacks(self, fnEstado=None, fnMedidas=None, fnEstados=None, fnDatosEquipo=None, fnOrden=None):
     """Configura los callbacks para notificar al GUI"""
@@ -543,6 +554,16 @@ class GestorMultiTarjeta:
     self._fnCallbackEstados = fnEstados
     self._fnCallbackDatosEquipo = fnDatosEquipo
     self._fnCallbackOrden = fnOrden
+
+
+  def SetModoMensajes(self, sModo):
+    """Configura el modo de visualización de mensajes en todas las tarjetas"""
+    # Guardar el modo para aplicarlo a threads futuros
+    self._sModoMensajes = sModo
+    # Aplicar a threads existentes
+    for oThread in self._lThreads:
+      if oThread and hasattr(oThread, '_oMaqEstados'):
+        oThread._oMaqEstados.SetModoMensajes(sModo)
 
 
   def InicializarTarjetas(self):
@@ -583,6 +604,9 @@ class GestorMultiTarjeta:
           oGestor=self
         )
 
+        # Aplicar el modo de mensajes configurado
+        oThread._oMaqEstados.SetModoMensajes(self._sModoMensajes)
+
         self._lThreads.append(oThread)
 
 
@@ -614,7 +638,8 @@ class GestorMultiTarjeta:
         self._oCSerie.reset_input_buffer()
         self._oCSerie.reset_output_buffer()
       except Exception as e:
-        print(f'Advertencia al limpiar buffers: {e}')
+        if self._sModoMensajes != 'hex':
+          print(f'Advertencia al limpiar buffers: {e}')
 
     # Iniciar todos los threads
     for oThread in self._lThreads:
@@ -658,7 +683,8 @@ class GestorMultiTarjeta:
         try:
           self._oCSerie.close()
         except Exception as e:
-          print(f'Error al cerrar puerto serie: {e}')
+          if self._sModoMensajes != 'hex':
+            print(f'Error al cerrar puerto serie: {e}')
 
     return ''
 
