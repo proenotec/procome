@@ -593,13 +593,52 @@ class FormPpal:
 
     # ==== Checkbox para activar/desactivar Modo Monitor ==========================================================================
 
-    checkBoxLayout = QHBoxLayout()
-    self._qtCheckBoxMonitor = QCheckBox('Activar Modo Monitor')
-    self._qtCheckBoxMonitor.setStyleSheet("color: black; font-weight: bold;")
+    # Frame destacado para el checkbox
+    monitorFrame = QFrame()
+    monitorFrame.setStyleSheet("""
+      QFrame {
+        background-color: #E3F2FD;
+        border: 2px solid #2196F3;
+        border-radius: 8px;
+        padding: 15px;
+      }
+    """)
+    monitorFrameLayout = QHBoxLayout(monitorFrame)
+
+    self._qtCheckBoxMonitor = QCheckBox('  Activar Modo Monitor Pasivo')
+    self._qtCheckBoxMonitor.setStyleSheet("""
+      QCheckBox {
+        color: #1976D2;
+        font-weight: bold;
+        font-size: 16px;
+        spacing: 15px;
+      }
+      QCheckBox::indicator {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #1976D2;
+        border-radius: 6px;
+        background-color: white;
+      }
+      QCheckBox::indicator:hover {
+        border: 3px solid #0D47A1;
+        background-color: #E3F2FD;
+      }
+      QCheckBox::indicator:checked {
+        background-color: #4CAF50;
+        border: 3px solid #388E3C;
+      }
+    """)
     self._qtCheckBoxMonitor.stateChanged.connect(self._CambiarModoMonitor)
-    checkBoxLayout.addWidget(self._qtCheckBoxMonitor)
-    checkBoxLayout.addStretch()
-    tabLayout.addLayout(checkBoxLayout)
+    monitorFrameLayout.addWidget(self._qtCheckBoxMonitor)
+
+    # Etiqueta de ayuda
+    lblAyuda = QLabel('← Marque esta casilla para comenzar')
+    lblAyuda.setStyleSheet("color: #666; font-size: 12px; font-style: italic;")
+    monitorFrameLayout.addWidget(lblAyuda)
+
+    monitorFrameLayout.addStretch()
+    tabLayout.addWidget(monitorFrame)
 
     # ==== Tabla de dispositivos detectados =======================================================================================
 
@@ -1255,10 +1294,33 @@ class FormPpal:
       lblNr.setStyleSheet("color: black; font-weight: bold;")
       gridLayout.addWidget(lblNr, i, 0)
 
-      # Checkbox habilitada
+      # Checkbox habilitada (más grande y visible)
       chkHab = QCheckBox()
       chkHab.setChecked(dCfg.get(f'Tarjeta{i}.Habilitada', False))
-      gridLayout.addWidget(chkHab, i, 1)
+      chkHab.setStyleSheet("""
+        QCheckBox {
+          spacing: 10px;
+        }
+        QCheckBox::indicator {
+          width: 30px;
+          height: 30px;
+          border: 2px solid #666;
+          border-radius: 4px;
+          background-color: white;
+        }
+        QCheckBox::indicator:checked {
+          background-color: #4CAF50;
+          border: 2px solid #4CAF50;
+          image: url(none);
+        }
+        QCheckBox::indicator:checked:after {
+          content: '✓';
+          color: white;
+          font-size: 20px;
+          font-weight: bold;
+        }
+      """)
+      gridLayout.addWidget(chkHab, i, 1, Qt.AlignmentFlag.AlignCenter)
 
       # SpinBox dirección
       sbxDir = QSpinBox()
@@ -1266,10 +1328,26 @@ class FormPpal:
       sbxDir.setValue(dCfg.get(f'Tarjeta{i}.DirRemota', i))
       gridLayout.addWidget(sbxDir, i, 2)
 
-      # Checkbox tests
+      # Checkbox tests (más grande y visible)
       chkTests = QCheckBox()
       chkTests.setChecked(dCfg.get(f'Tarjeta{i}.TestsHabilitados', False))
-      gridLayout.addWidget(chkTests, i, 3)
+      chkTests.setStyleSheet("""
+        QCheckBox {
+          spacing: 10px;
+        }
+        QCheckBox::indicator {
+          width: 30px;
+          height: 30px;
+          border: 2px solid #666;
+          border-radius: 4px;
+          background-color: white;
+        }
+        QCheckBox::indicator:checked {
+          background-color: #4CAF50;
+          border: 2px solid #4CAF50;
+        }
+      """)
+      gridLayout.addWidget(chkTests, i, 3, Qt.AlignmentFlag.AlignCenter)
 
       dControles[i] = {
         'Habilitada': chkHab,
