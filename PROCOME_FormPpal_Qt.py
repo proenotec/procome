@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.6.2"
+  _VERSION = "2.6.3"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -657,7 +657,16 @@ class FormPpal:
     header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)           # Tipos ASDU
     header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Primera Detección
 
-    self._qtTablaMonitor.setStyleSheet("background-color: white; color: black;")
+    self._qtTablaMonitor.setStyleSheet("""
+      QTableWidget {
+        background-color: white;
+        alternate-background-color: #F0F0F0;
+        color: black;
+      }
+      QTableWidget::item {
+        color: black;
+      }
+    """)
     self._qtTablaMonitor.setAlternatingRowColors(True)
     self._qtTablaMonitor.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)  # Solo lectura
 
@@ -1719,28 +1728,35 @@ class FormPpal:
     self._EscribirEnConsolaThreadSafe('Consola abierta - Sistema Multi-Tarjeta\n')
 
     self._qtConsoleWindow.show()
-    self._ReorganizarVentanas()
+    # Procesar eventos pendientes para asegurar que las ventanas estén completamente renderizadas
+    self._qApp.processEvents()
+    # Pequeño delay para asegurar que el gestor de ventanas procese la geometría
+    QTimer.singleShot(100, self._ReorganizarVentanas)
 
   def _ReorganizarVentanas(self):
     """Reorganiza las ventanas en la pantalla"""
+    if self._qtConsoleWindow is None or not self._qtConsoleWindow.isVisible():
+      return
+
     screen = self._qApp.primaryScreen()
     screenGeometry = screen.availableGeometry()
 
     mainWindowWidth = self._qtWindow.width()
     mainWindowHeight = self._qtWindow.height()
 
-    mainWindowX = screenGeometry.width() - mainWindowWidth
-    mainWindowY = 0
+    # Ventana principal a la DERECHA
+    mainWindowX = screenGeometry.width() - mainWindowWidth - 10  # 10px margen
+    mainWindowY = 10  # 10px margen superior
 
     self._qtWindow.move(mainWindowX, mainWindowY)
 
-    consoleX = 0
-    consoleY = 0
-    consoleWidth = screenGeometry.width() - mainWindowWidth
-    consoleHeight = screenGeometry.height()
+    # Ventana de consola a la IZQUIERDA
+    consoleX = 10  # 10px margen
+    consoleY = 10  # 10px margen superior
+    consoleWidth = screenGeometry.width() - mainWindowWidth - 40  # Dejar espacio entre ventanas
+    consoleHeight = screenGeometry.height() - 20  # 10px margen superior e inferior
 
-    if self._qtConsoleWindow is not None:
-      self._qtConsoleWindow.setGeometry(consoleX, consoleY, consoleWidth, consoleHeight)
+    self._qtConsoleWindow.setGeometry(consoleX, consoleY, consoleWidth, consoleHeight)
 
   def _EscribirEnConsolaThreadSafe(self, texto):
     """Escribe texto en la ventana de consola (thread-safe, llamado vía señal Qt)

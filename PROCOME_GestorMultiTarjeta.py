@@ -296,9 +296,12 @@ class ThreadTarjeta(threading.Thread):
           lTramaRcp = xRta.copy()
           self._oConstrTramaRcp.Reset()
 
-          # NUEVO: Si modo Monitor, registrar en detector
+          # NUEVO: Si modo Monitor, solo registrar en detector (NO distribuir a threads)
           if self._oGestor._bModoMonitor and self._oGestor._oDetectorDispositivos:
             self._oGestor._oDetectorDispositivos.RegistrarTrama(lTramaRcp)
+            # En modo Monitor, NO distribuir tramas a las máquinas de estados
+            # porque no están en un flujo normal de protocolo y generarían errores
+            continue
 
           # Distribuir la trama a todos los threads (cada uno filtrará por dirección)
           for oThread in self._oGestor._lThreads:

@@ -52,11 +52,15 @@ class DetectorDispositivos:
         """
         Analiza una trama recibida y registra el dispositivo detectado.
 
+        IMPORTANTE: Solo registra dispositivos que TRANSMITEN (responden), no los que son interrogados.
+        Esto se logra filtrando tramas con PRM=0 (Secundario/Slave responde).
+        Si PRM=1 (Primario/Master interroga), el campo 'Dir' es el destino, no el origen.
+
         Args:
             lTrama: Lista de bytes con la trama completa recibida
 
         Returns:
-            True si se registró correctamente, False si la trama no es válida
+            True si se registró correctamente, False si la trama no es válida o es del master
         """
         # Analizar la trama usando la función existente
         dAnalisis = PROCOME_AnalizarTramaRcp.AnalizarTrama(lTrama)
@@ -65,7 +69,12 @@ class DetectorDispositivos:
         if not dAnalisis['TramaValida']:
             return False
 
-        # Obtener dirección del dispositivo
+        # FILTRO CRÍTICO: Solo registrar tramas de dispositivos que TRANSMITEN (PRM=0)
+        # Si PRM=1, es el master interrogando, no un dispositivo respondiendo
+        if dAnalisis['BitPRM']:
+            return False
+
+        # Obtener dirección del dispositivo (que está transmitiendo)
         iDireccion = dAnalisis['Dir']
 
         # Ignorar dirección universal (broadcast)
