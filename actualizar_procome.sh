@@ -33,13 +33,14 @@ if [ "$EUID" -ne 0 ]; then
    exit 1
 fi
 
-# Verificar que gh CLI está instalado
-if ! command -v gh &> /dev/null && ! command -v curl &> /dev/null && ! command -v wget &> /dev/null; then
-    echo -e "${RED}Error: Se necesita 'gh', 'curl' o 'wget' para descargar${NC}"
+# Verificar que hay algún método para descargar
+if ! command -v curl &> /dev/null && ! command -v wget &> /dev/null && ! command -v gh &> /dev/null; then
+    echo -e "${RED}Error: Se necesita 'curl', 'wget' o 'gh' para descargar${NC}"
+    echo ""
     echo "Instala uno de ellos:"
-    echo "  gh:   sudo apt install gh"
-    echo "  curl: sudo apt install curl"
-    echo "  wget: sudo apt install wget"
+    echo "  curl (recomendado): sudo apt install curl"
+    echo "  wget:               sudo apt install wget"
+    echo "  gh CLI:             sudo apt install gh"
     exit 1
 fi
 
@@ -54,20 +55,28 @@ echo -e "${CYAN}Versión instalada:${NC} $VERSION_INSTALADA"
 # Obtener última versión desde GitHub
 echo -e "${YELLOW}→${NC} Consultando última versión en GitHub..."
 
-if command -v gh &> /dev/null; then
-    # Usar gh CLI si está disponible
-    ULTIMA_VERSION=$(gh release view --repo "$REPO" --json tagName --jq '.tagName' 2>/dev/null | sed 's/^v//')
-    if [ -z "$ULTIMA_VERSION" ]; then
-        echo -e "${RED}Error: No se pudo obtener la última versión${NC}"
-        exit 1
-    fi
-else
-    # Usar API de GitHub si no hay gh CLI
+# Intentar con curl primero (no requiere autenticación)
+if command -v curl &> /dev/null; then
     ULTIMA_VERSION=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
-    if [ -z "$ULTIMA_VERSION" ]; then
-        echo -e "${RED}Error: No se pudo obtener la última versión${NC}"
-        exit 1
-    fi
+# Intentar con wget si no hay curl
+elif command -v wget &> /dev/null; then
+    ULTIMA_VERSION=$(wget -qO- "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+# Usar gh CLI como último recurso (requiere autenticación)
+elif command -v gh &> /dev/null; then
+    ULTIMA_VERSION=$(gh release view --repo "$REPO" --json tagName --jq '.tagName' 2>/dev/null | sed 's/^v//')
+fi
+
+# Verificar que se obtuvo la versión
+if [ -z "$ULTIMA_VERSION" ]; then
+    echo -e "${RED}Error: No se pudo obtener la última versión${NC}"
+    echo ""
+    echo "Posibles causas:"
+    echo "  - No hay conexión a internet"
+    echo "  - GitHub API no está disponible"
+    echo "  - Rate limit de GitHub excedido"
+    echo ""
+    echo "Intenta de nuevo en unos minutos o verifica tu conexión."
+    exit 1
 fi
 
 echo -e "${CYAN}Última versión:${NC} $ULTIMA_VERSION"
