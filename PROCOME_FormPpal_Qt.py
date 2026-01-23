@@ -15,9 +15,10 @@ import tempfile
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QPushButton,
                                QLineEdit, QComboBox, QSpinBox, QFrame, QGroupBox,
                                QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox,
-                               QFileDialog, QDialog, QTextEdit, QCheckBox, QTabWidget)
+                               QFileDialog, QDialog, QTextEdit, QCheckBox, QTabWidget,
+                               QTableWidget, QTableWidgetItem, QHeaderView)
 from PySide6.QtCore import QTimer, Qt, Signal, QObject
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QColor
 import PROCOME_General
 import PROCOME_GestorMultiTarjeta
 import PROCOME_AnalizarTramaRcp
@@ -610,7 +611,6 @@ class FormPpal:
 
     # Configurar tamaño de columnas
     header = self._qtTablaMonitor.horizontalHeader()
-    from PySide6.QtWidgets import QHeaderView
     header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Dirección
     header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Estado
     header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Última Act.
@@ -856,8 +856,6 @@ class FormPpal:
 
   def _CambiarModoMonitor(self, state):
     """Activa o desactiva el modo Monitor pasivo"""
-    from PySide6.QtCore import Qt, QTimer
-
     bActivar = (state == Qt.CheckState.Checked.value)
 
     # Validar que NO haya comunicación normal activa
@@ -922,8 +920,6 @@ class FormPpal:
       dInfo = dDispositivos[iDireccion]
 
       # Columna 0: Dirección
-      from PySide6.QtWidgets import QTableWidgetItem
-      from PySide6.QtCore import Qt
       item = QTableWidgetItem(str(dInfo['Direccion']))
       item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
       self._qtTablaMonitor.setItem(iFila, 0, item)
@@ -933,10 +929,8 @@ class FormPpal:
       item = QTableWidgetItem(sEstado)
       item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
       if sEstado == 'Activo':
-        from PySide6.QtGui import QColor
         item.setBackground(QColor('#90EE90'))  # Verde claro
       else:
-        from PySide6.QtGui import QColor
         item.setBackground(QColor('#FFB6C1'))  # Rojo claro
       self._qtTablaMonitor.setItem(iFila, 1, item)
 
