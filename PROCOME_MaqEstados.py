@@ -28,9 +28,11 @@ class PROCOME_MaqEstados:
   # **** Constructor
   # ***************************************************************************************************************************
 
-  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None, fnCallbackBeepTransmision=None, fnCallbackBeepRecepcion=None):
+  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None, fnCallbackBeepTransmision=None, fnCallbackBeepRecepcion=None, bModoMonitor=False):
 
     # **** Constantes *********************************************************************************************************
+
+    self._bModoMonitor = bModoMonitor  # Modo Monitor pasivo (sin transmisiones)
 
     self._K_iNrMaxIntentos= 10
     self._K_fTmoRcp_Std_seg= 1.0
@@ -254,7 +256,23 @@ class PROCOME_MaqEstados:
           # **** Evento: 'Arrancar' *******************************************************************************************
 
           if (sEvento == 'Arrancar') :
-            # Si el puerto no está abierto, intentar abrirlo
+            # En modo Monitor: solo abrir puerto sin iniciar protocolo
+            if self._bModoMonitor:
+              if not self._oCanalSerie.is_open:
+                try:
+                  self._oCanalSerie.open()
+                except:
+                  return 'ERROR: Al intentar abrir el canal serie <' + self._oCanalSerie.port + '>. Puede ser que ese canal serie no exista o que esta ocupado'
+
+              self._oConstrTramaRcp.Reset()
+              try:
+                self._oCanalSerie.rts = False  # Desactivar RTS para no transmitir
+              except:
+                pass
+              sEvento = 'Procesado'
+              return ''
+
+            # Modo normal: Si el puerto no está abierto, intentar abrirlo
             if not self._oCanalSerie.is_open:
               try :
                 self._oCanalSerie.open()
@@ -1288,6 +1306,10 @@ class PROCOME_MaqEstados:
   # ===========================================================================================================================
 
   def _TransmitirTrama(self):
+    # En modo Monitor NO transmitir NADA
+    if self._bModoMonitor:
+      return
+
     self._oCanalSerie.rts= True
     self._oCanalSerie.write(bytes(self._lTramaTrm))
     # & self._oCanalSerie.rts= False

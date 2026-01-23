@@ -296,6 +296,10 @@ class ThreadTarjeta(threading.Thread):
           lTramaRcp = xRta.copy()
           self._oConstrTramaRcp.Reset()
 
+          # NUEVO: Si modo Monitor, registrar en detector
+          if self._oGestor._bModoMonitor and self._oGestor._oDetectorDispositivos:
+            self._oGestor._oDetectorDispositivos.RegistrarTrama(lTramaRcp)
+
           # Distribuir la trama a todos los threads (cada uno filtrará por dirección)
           for oThread in self._oGestor._lThreads:
             oThread._qTramas.put(lTramaRcp)
@@ -553,6 +557,11 @@ class GestorMultiTarjeta:
     # Modo de visualización de mensajes en consola
     self._sModoMensajes = 'explicado'  # Modo por defecto
 
+    # Modo Monitor
+    self._bModoMonitor = False
+    self._oDetectorDispositivos = None
+    self._threadVigilante = None
+
 
   def SetCallbacks(self, fnEstado=None, fnMedidas=None, fnEstados=None, fnDatosEquipo=None, fnOrden=None, fnBeepTransmision=None, fnBeepRecepcion=None):
     """Configura los callbacks para notificar al GUI"""
@@ -573,6 +582,22 @@ class GestorMultiTarjeta:
     for oThread in self._lThreads:
       if oThread and hasattr(oThread, '_oMaqEstados'):
         oThread._oMaqEstados.SetModoMensajes(sModo)
+
+
+  def ActivarModoMonitor(self, bActivar=True):
+    """Activa o desactiva el modo Monitor pasivo"""
+    self._bModoMonitor = bActivar
+
+    if bActivar:
+      import PROCOME_DetectorDispositivos
+      self._oDetectorDispositivos = PROCOME_DetectorDispositivos.DetectorDispositivos(30.0)
+    else:
+      # Detener thread vigilante si existe
+      if self._threadVigilante and self._threadVigilante.is_alive():
+        self._bModoMonitor = False  # Esto hará que el thread se detenga
+        self._threadVigilante.join(timeout=2.0)
+      self._threadVigilante = None
+      self._oDetectorDispositivos = None
 
 
   def InicializarTarjetas(self):
@@ -667,6 +692,15 @@ class GestorMultiTarjeta:
       if idx < len(self._lThreads) - 1:
         time.sleep(0.1)
 
+    # Si modo Monitor, iniciar thread vigilante
+    if self._bModoMonitor and self._oDetectorDispositivos:
+      if self._threadVigilante is None or not self._threadVigilante.is_alive():
+        self._threadVigilante = threading.Thread(
+          target=self._ThreadVigilanteTimeouts,
+          daemon=True
+        )
+        self._threadVigilante.start()
+
     return ''
 
 
@@ -698,6 +732,23 @@ class GestorMultiTarjeta:
             print(f'Error al cerrar puerto serie: {e}')
 
     return ''
+
+
+  def _ThreadVigilanteTimeouts(self):
+    """Thread que actualiza timeouts de dispositivos cada segundo"""
+    while self._bModoMonitor and self._oDetectorDispositivos:
+      try:
+        self._oDetectorDispositivos.ActualizarTimeouts()
+        time.sleep(1.0)
+      except:
+        break
+
+
+  def ObtenerDispositivosDetectados(self):
+    """Devuelve diccionario de dispositivos detectados"""
+    if self._oDetectorDispositivos:
+      return self._oDetectorDispositivos.ObtenerDispositivos()
+    return {}
 
 
   def EnviarOrden(self, iNrTarjeta, iNrOrden, sTipoOperacion):

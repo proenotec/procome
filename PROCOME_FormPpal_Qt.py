@@ -79,7 +79,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.5.1"
+  _VERSION = "2.6.0"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -124,6 +124,11 @@ class FormPpal:
     self._dIndicadoresEstado= {}  # {iNrTarjeta: QLabel}
     self._dTarjetasGUI= {}  # {iNrTarjeta: {widgets...}}
     self._bComunicacionActiva= False
+
+    # Variables para Modo Monitor
+    self._qTimerMonitor = None  # Timer para actualizar tabla Monitor
+    self._qtTablaMonitor = None  # Tabla de dispositivos detectados
+    self._qtCheckBoxMonitor = None  # Checkbox para activar/desactivar modo Monitor
 
     # Señales Qt para actualización desde threads
     self._oSignals= SignalEmitter()
@@ -350,6 +355,11 @@ class FormPpal:
       sTitulo = f'Tarjeta {iNrTarjeta}' + (f' (Dir {iDirRemota})' if bHabilitada else ' (Deshabilitada)')
       self._qtTabWidget.addTab(tabWidget, sTitulo)
 
+    # ==== Crear pestaña Monitor de Bus ===============================================================================================
+
+    tabMonitor = self._CrearPestanaMonitor()
+    self._qtTabWidget.addTab(tabMonitor, 'Monitor de Bus')
+
     # ==== Barra de estado ============================================================================================================
 
     self._CrearBarraEstado()
@@ -563,6 +573,77 @@ class FormPpal:
     return tabWidget
 
 
+  def _CrearPestanaMonitor(self):
+    """Crea la pestaña de Monitor de Bus para detectar dispositivos PROCOME"""
+
+    tabWidget = QWidget()
+    tabLayout = QVBoxLayout(tabWidget)
+
+    # ==== Instrucciones ==========================================================================================================
+
+    lblInstrucciones = QLabel(
+      'El Modo Monitor escucha pasivamente el tráfico del bus RS-485 sin transmitir datos.\n'
+      'Detecta automáticamente dispositivos PROCOME y muestra su actividad en tiempo real.\n'
+      'Los dispositivos que no transmitan durante más de 30 segundos se marcarán como "Timeout".'
+    )
+    lblInstrucciones.setStyleSheet("color: #333333; padding: 10px; background-color: #F0F0F0;")
+    lblInstrucciones.setWordWrap(True)
+    tabLayout.addWidget(lblInstrucciones)
+
+    # ==== Checkbox para activar/desactivar Modo Monitor ==========================================================================
+
+    checkBoxLayout = QHBoxLayout()
+    self._qtCheckBoxMonitor = QCheckBox('Activar Modo Monitor')
+    self._qtCheckBoxMonitor.setStyleSheet("color: black; font-weight: bold;")
+    self._qtCheckBoxMonitor.stateChanged.connect(self._CambiarModoMonitor)
+    checkBoxLayout.addWidget(self._qtCheckBoxMonitor)
+    checkBoxLayout.addStretch()
+    tabLayout.addLayout(checkBoxLayout)
+
+    # ==== Tabla de dispositivos detectados =======================================================================================
+
+    self._qtTablaMonitor = QTableWidget()
+    self._qtTablaMonitor.setColumnCount(6)
+    self._qtTablaMonitor.setHorizontalHeaderLabels([
+      'Dirección', 'Estado', 'Última Act.', 'Tramas Recibidas', 'Tipos ASDU', 'Primera Detección'
+    ])
+
+    # Configurar tamaño de columnas
+    header = self._qtTablaMonitor.horizontalHeader()
+    from PySide6.QtWidgets import QHeaderView
+    header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Dirección
+    header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Estado
+    header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Última Act.
+    header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Tramas Recibidas
+    header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)           # Tipos ASDU
+    header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Primera Detección
+
+    self._qtTablaMonitor.setStyleSheet("background-color: white; color: black;")
+    self._qtTablaMonitor.setAlternatingRowColors(True)
+    self._qtTablaMonitor.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)  # Solo lectura
+
+    tabLayout.addWidget(self._qtTablaMonitor)
+
+    # ==== Botones de control =====================================================================================================
+
+    botonesLayout = QHBoxLayout()
+
+    qbActualizar = QPushButton('Actualizar Tabla')
+    qbActualizar.setStyleSheet("background-color: #90EE90;")
+    qbActualizar.clicked.connect(self._ActualizarTablaMonitor)
+    botonesLayout.addWidget(qbActualizar)
+
+    qbLimpiar = QPushButton('Limpiar Historial')
+    qbLimpiar.setStyleSheet("background-color: #FFB6C1;")
+    qbLimpiar.clicked.connect(self._LimpiarHistorialMonitor)
+    botonesLayout.addWidget(qbLimpiar)
+
+    botonesLayout.addStretch()
+    tabLayout.addLayout(botonesLayout)
+
+    return tabWidget
+
+
   def _CrearBarraEstado(self):
     """Crea la barra de estado inferior"""
 
@@ -707,6 +788,12 @@ class FormPpal:
     if self._bArranqueClase:
       return
 
+    # Verificar que modo Monitor no esté activo
+    if self._oGestorTarjetas._bModoMonitor:
+      QMessageBox.warning(self._qtWindow, 'Advertencia',
+        'El modo Monitor está activo. Desactívelo antes de iniciar comunicación normal.')
+      return
+
     if not self._bComunicacionActiva:
       # Arrancar comunicación
       sError = self._oGestorTarjetas.ArrancarComunicacion()
@@ -761,6 +848,139 @@ class FormPpal:
       else:
         dOrden['Abrir'].setStyleSheet(f"background-color: {self._sColorGris};")
         dOrden['Cerrar'].setStyleSheet(f"background-color: {self._sColorGris};")
+
+
+  # ***************************************************************************************************************************
+  # **** MODO MONITOR
+  # ***************************************************************************************************************************
+
+  def _CambiarModoMonitor(self, state):
+    """Activa o desactiva el modo Monitor pasivo"""
+    from PySide6.QtCore import Qt, QTimer
+
+    bActivar = (state == Qt.CheckState.Checked.value)
+
+    # Validar que NO haya comunicación normal activa
+    if bActivar and self._bComunicacionActiva:
+      QMessageBox.warning(self._qtWindow, 'Advertencia',
+        'No se puede activar el modo Monitor mientras hay comunicación activa.\n'
+        'Detenga la comunicación primero.')
+      self._qtCheckBoxMonitor.setChecked(False)
+      return
+
+    if bActivar:
+      # Activar modo Monitor
+      self._oGestorTarjetas.ActivarModoMonitor(True)
+
+      # Arrancar comunicación (solo lectura del puerto)
+      sError = self._oGestorTarjetas.ArrancarComunicacion()
+      if sError:
+        QMessageBox.critical(self._qtWindow, 'Error', sError)
+        self._oGestorTarjetas.ActivarModoMonitor(False)
+        self._qtCheckBoxMonitor.setChecked(False)
+        return
+
+      # Crear timer para actualizar tabla cada 2 segundos
+      self._qTimerMonitor = QTimer()
+      self._qTimerMonitor.timeout.connect(self._ActualizarTablaMonitor)
+      self._qTimerMonitor.start(2000)  # 2 segundos
+
+      # Actualizar inmediatamente
+      self._ActualizarTablaMonitor()
+
+    else:
+      # Desactivar modo Monitor
+      if self._qTimerMonitor:
+        self._qTimerMonitor.stop()
+        self._qTimerMonitor = None
+
+      # Parar comunicación
+      self._oGestorTarjetas.PararComunicacion()
+
+      # Desactivar modo Monitor
+      self._oGestorTarjetas.ActivarModoMonitor(False)
+
+      # Limpiar tabla
+      self._qtTablaMonitor.setRowCount(0)
+
+
+  def _ActualizarTablaMonitor(self):
+    """Actualiza la tabla de dispositivos detectados en modo Monitor"""
+    import time
+
+    # Obtener dispositivos detectados
+    dDispositivos = self._oGestorTarjetas.ObtenerDispositivosDetectados()
+
+    # Ordenar por dirección
+    lDirecciones = sorted(dDispositivos.keys())
+
+    # Ajustar número de filas
+    self._qtTablaMonitor.setRowCount(len(lDirecciones))
+
+    # Llenar tabla
+    for iFila, iDireccion in enumerate(lDirecciones):
+      dInfo = dDispositivos[iDireccion]
+
+      # Columna 0: Dirección
+      from PySide6.QtWidgets import QTableWidgetItem
+      from PySide6.QtCore import Qt
+      item = QTableWidgetItem(str(dInfo['Direccion']))
+      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+      self._qtTablaMonitor.setItem(iFila, 0, item)
+
+      # Columna 1: Estado (con color)
+      sEstado = dInfo['Estado']
+      item = QTableWidgetItem(sEstado)
+      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+      if sEstado == 'Activo':
+        from PySide6.QtGui import QColor
+        item.setBackground(QColor('#90EE90'))  # Verde claro
+      else:
+        from PySide6.QtGui import QColor
+        item.setBackground(QColor('#FFB6C1'))  # Rojo claro
+      self._qtTablaMonitor.setItem(iFila, 1, item)
+
+      # Columna 2: Última Actividad (tiempo transcurrido)
+      fTiempoDesdeActividad = time.time() - dInfo['UltimaActividad']
+      if fTiempoDesdeActividad < 60:
+        sTiempo = f'{int(fTiempoDesdeActividad)}s'
+      elif fTiempoDesdeActividad < 3600:
+        sTiempo = f'{int(fTiempoDesdeActividad / 60)}m {int(fTiempoDesdeActividad % 60)}s'
+      else:
+        sTiempo = f'{int(fTiempoDesdeActividad / 3600)}h {int((fTiempoDesdeActividad % 3600) / 60)}m'
+      item = QTableWidgetItem(sTiempo)
+      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+      self._qtTablaMonitor.setItem(iFila, 2, item)
+
+      # Columna 3: Contador de tramas
+      item = QTableWidgetItem(str(dInfo['Contador']))
+      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+      self._qtTablaMonitor.setItem(iFila, 3, item)
+
+      # Columna 4: Tipos de mensajes (ASDU)
+      lTipos = sorted(dInfo['TiposMensajes'])
+      sTipos = ', '.join(str(t) for t in lTipos)
+      item = QTableWidgetItem(sTipos)
+      self._qtTablaMonitor.setItem(iFila, 4, item)
+
+      # Columna 5: Primera Detección (tiempo desde inicio)
+      fTiempoDesdeDeteccion = time.time() - dInfo['PrimeraMencion']
+      if fTiempoDesdeDeteccion < 60:
+        sTiempo = f'{int(fTiempoDesdeDeteccion)}s'
+      elif fTiempoDesdeDeteccion < 3600:
+        sTiempo = f'{int(fTiempoDesdeDeteccion / 60)}m {int(fTiempoDesdeDeteccion % 60)}s'
+      else:
+        sTiempo = f'{int(fTiempoDesdeDeteccion / 3600)}h {int((fTiempoDesdeDeteccion % 3600) / 60)}m'
+      item = QTableWidgetItem(sTiempo)
+      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+      self._qtTablaMonitor.setItem(iFila, 5, item)
+
+
+  def _LimpiarHistorialMonitor(self):
+    """Limpia el historial de dispositivos detectados"""
+    if self._oGestorTarjetas._oDetectorDispositivos:
+      self._oGestorTarjetas._oDetectorDispositivos.Reset()
+      self._ActualizarTablaMonitor()
 
 
   def _CSerie_MostrarCfg(self, sTxtAux):
