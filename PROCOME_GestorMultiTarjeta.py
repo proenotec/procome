@@ -652,18 +652,6 @@ class GestorMultiTarjeta:
   def ArrancarComunicacion(self):
     """Arranca la comunicación de todas las tarjetas habilitadas"""
 
-    # Si los threads están muertos o vacíos, recrearlos
-    bNecesitaReinicializar = len(self._lThreads) == 0
-    if not bNecesitaReinicializar:
-      # Verificar si algún thread está muerto
-      for oThread in self._lThreads:
-        if not oThread.is_alive():
-          bNecesitaReinicializar = True
-          break
-
-    if bNecesitaReinicializar:
-      self.InicializarTarjetas()
-
     # Abrir puerto serie si no está abierto (con lock para thread-safety)
     with self._oSerialLock:
       if not self._oCSerie.is_open:
@@ -680,6 +668,34 @@ class GestorMultiTarjeta:
         if self._sModoMensajes != 'hex':
           print(f'Advertencia al limpiar buffers: {e}')
 
+    # MODO MONITOR: Solo escuchar, NO arrancar threads de tarjetas
+    if self._bModoMonitor and self._oDetectorDispositivos:
+      print('[MODO MONITOR] Escuchando pasivamente el bus RS-485...')
+      print('[MODO MONITOR] NO se transmitirá ningún dato')
+
+      # Iniciar thread vigilante para timeouts
+      if self._threadVigilante is None or not self._threadVigilante.is_alive():
+        self._threadVigilante = threading.Thread(
+          target=self._ThreadVigilanteTimeouts,
+          daemon=True
+        )
+        self._threadVigilante.start()
+
+      return ''
+
+    # MODO NORMAL: Arrancar threads de tarjetas
+    # Si los threads están muertos o vacíos, recrearlos
+    bNecesitaReinicializar = len(self._lThreads) == 0
+    if not bNecesitaReinicializar:
+      # Verificar si algún thread está muerto
+      for oThread in self._lThreads:
+        if not oThread.is_alive():
+          bNecesitaReinicializar = True
+          break
+
+    if bNecesitaReinicializar:
+      self.InicializarTarjetas()
+
     # Iniciar todos los threads
     for oThread in self._lThreads:
       if not oThread.is_alive():
@@ -694,15 +710,6 @@ class GestorMultiTarjeta:
       # Pequeño delay para evitar que ambas tarjetas transmitan exactamente al mismo tiempo
       if idx < len(self._lThreads) - 1:
         time.sleep(0.1)
-
-    # Si modo Monitor, iniciar thread vigilante
-    if self._bModoMonitor and self._oDetectorDispositivos:
-      if self._threadVigilante is None or not self._threadVigilante.is_alive():
-        self._threadVigilante = threading.Thread(
-          target=self._ThreadVigilanteTimeouts,
-          daemon=True
-        )
-        self._threadVigilante.start()
 
     return ''
 

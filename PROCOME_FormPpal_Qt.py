@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.6.3"
+  _VERSION = "2.6.4"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -256,6 +256,10 @@ class FormPpal:
       tabWidget = self._CrearPestanaTarjeta(iNrTarjeta, iDirRemota, bHabilitada)
       sTitulo = f'Tarjeta {iNrTarjeta}' + (f' (Dir {iDirRemota})' if bHabilitada else ' (Deshabilitada)')
       self._qtTabWidget.addTab(tabWidget, sTitulo)
+
+    # Recrear pestaña Monitor de Bus
+    tabMonitor = self._CrearPestanaMonitor()
+    self._qtTabWidget.addTab(tabMonitor, 'Monitor de Bus')
 
     # Reinicializar gestor de tarjetas
     self._oGestorTarjetas.InicializarTarjetas()
@@ -1734,29 +1738,31 @@ class FormPpal:
     QTimer.singleShot(100, self._ReorganizarVentanas)
 
   def _ReorganizarVentanas(self):
-    """Reorganiza las ventanas en la pantalla"""
+    """Reorganiza las ventanas en la pantalla: consola MITAD IZQUIERDA, programa MITAD DERECHA"""
     if self._qtConsoleWindow is None or not self._qtConsoleWindow.isVisible():
       return
 
     screen = self._qApp.primaryScreen()
     screenGeometry = screen.availableGeometry()
 
-    mainWindowWidth = self._qtWindow.width()
-    mainWindowHeight = self._qtWindow.height()
+    # Calcular mitades exactas
+    iMitadAncho = screenGeometry.width() // 2
 
-    # Ventana principal a la DERECHA
-    mainWindowX = screenGeometry.width() - mainWindowWidth - 10  # 10px margen
-    mainWindowY = 10  # 10px margen superior
-
-    self._qtWindow.move(mainWindowX, mainWindowY)
-
-    # Ventana de consola a la IZQUIERDA
-    consoleX = 10  # 10px margen
-    consoleY = 10  # 10px margen superior
-    consoleWidth = screenGeometry.width() - mainWindowWidth - 40  # Dejar espacio entre ventanas
-    consoleHeight = screenGeometry.height() - 20  # 10px margen superior e inferior
+    # CONSOLA: Mitad izquierda completa (0, 0, mitad, alto_total)
+    consoleX = screenGeometry.x()
+    consoleY = screenGeometry.y()
+    consoleWidth = iMitadAncho
+    consoleHeight = screenGeometry.height()
 
     self._qtConsoleWindow.setGeometry(consoleX, consoleY, consoleWidth, consoleHeight)
+
+    # PROGRAMA: Mitad derecha completa (mitad, 0, mitad, alto_total)
+    mainWindowX = screenGeometry.x() + iMitadAncho
+    mainWindowY = screenGeometry.y()
+    mainWindowWidth = iMitadAncho
+    mainWindowHeight = screenGeometry.height()
+
+    self._qtWindow.setGeometry(mainWindowX, mainWindowY, mainWindowWidth, mainWindowHeight)
 
   def _EscribirEnConsolaThreadSafe(self, texto):
     """Escribe texto en la ventana de consola (thread-safe, llamado vía señal Qt)

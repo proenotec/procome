@@ -85,6 +85,11 @@ class DetectorDispositivos:
         if iDireccion < PROCOME_General.PROCOME_DIR_MIN or iDireccion > PROCOME_General.PROCOME_DIR_MAX:
             return False
 
+        # IMPRIMIR TRAMA EN CONSOLA (Modo Monitor)
+        sHex = ' '.join([f'{b:02X}' for b in lTrama])
+        sTipo = 'CORTA' if dAnalisis['TramaCorta'] else f'LARGA (ASDU {dAnalisis["TYP"]})'
+        print(f'>>>> Dir={iDireccion:3d} {sTipo:20s} : {sHex}')
+
         # Obtener timestamp actual
         fAhora = time.time()
 
