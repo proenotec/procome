@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.7.0"
+  _VERSION = "2.7.1"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -964,27 +964,42 @@ class FormPpal:
     # Ordenar por dirección
     lDirecciones = sorted(dDispositivos.keys())
 
+    # Bloquear señales durante la actualización para mejor performance
+    self._qtTablaMonitor.blockSignals(True)
+
     # Ajustar número de filas
-    self._qtTablaMonitor.setRowCount(len(lDirecciones))
+    iFilasActuales = self._qtTablaMonitor.rowCount()
+    iFilasNecesarias = len(lDirecciones)
+
+    # Si cambia el número de filas, recrear la tabla
+    if iFilasActuales != iFilasNecesarias:
+      self._qtTablaMonitor.clearContents()
+      self._qtTablaMonitor.setRowCount(iFilasNecesarias)
 
     # Llenar tabla
     for iFila, iDireccion in enumerate(lDirecciones):
       dInfo = dDispositivos[iDireccion]
 
       # Columna 0: Dirección
-      item = QTableWidgetItem(str(dInfo['Direccion']))
-      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-      self._qtTablaMonitor.setItem(iFila, 0, item)
+      item = self._qtTablaMonitor.item(iFila, 0)
+      if item is None:
+        item = QTableWidgetItem()
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._qtTablaMonitor.setItem(iFila, 0, item)
+      item.setText(str(dInfo['Direccion']))
 
       # Columna 1: Estado (con color)
       sEstado = dInfo['Estado']
-      item = QTableWidgetItem(sEstado)
-      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+      item = self._qtTablaMonitor.item(iFila, 1)
+      if item is None:
+        item = QTableWidgetItem()
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._qtTablaMonitor.setItem(iFila, 1, item)
+      item.setText(sEstado)
       if sEstado == 'Activo':
         item.setBackground(QColor('#90EE90'))  # Verde claro
       else:
         item.setBackground(QColor('#FFB6C1'))  # Rojo claro
-      self._qtTablaMonitor.setItem(iFila, 1, item)
 
       # Columna 2: Última Actividad (tiempo transcurrido)
       fTiempoDesdeActividad = time.time() - dInfo['UltimaActividad']
@@ -994,20 +1009,29 @@ class FormPpal:
         sTiempo = f'{int(fTiempoDesdeActividad / 60)}m {int(fTiempoDesdeActividad % 60)}s'
       else:
         sTiempo = f'{int(fTiempoDesdeActividad / 3600)}h {int((fTiempoDesdeActividad % 3600) / 60)}m'
-      item = QTableWidgetItem(sTiempo)
-      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-      self._qtTablaMonitor.setItem(iFila, 2, item)
+      item = self._qtTablaMonitor.item(iFila, 2)
+      if item is None:
+        item = QTableWidgetItem()
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._qtTablaMonitor.setItem(iFila, 2, item)
+      item.setText(sTiempo)
 
       # Columna 3: Contador de tramas
-      item = QTableWidgetItem(str(dInfo['Contador']))
-      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-      self._qtTablaMonitor.setItem(iFila, 3, item)
+      item = self._qtTablaMonitor.item(iFila, 3)
+      if item is None:
+        item = QTableWidgetItem()
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._qtTablaMonitor.setItem(iFila, 3, item)
+      item.setText(str(dInfo['Contador']))
 
       # Columna 4: Tipos de mensajes (ASDU)
       lTipos = sorted(dInfo['TiposMensajes'])
       sTipos = ', '.join(str(t) for t in lTipos)
-      item = QTableWidgetItem(sTipos)
-      self._qtTablaMonitor.setItem(iFila, 4, item)
+      item = self._qtTablaMonitor.item(iFila, 4)
+      if item is None:
+        item = QTableWidgetItem()
+        self._qtTablaMonitor.setItem(iFila, 4, item)
+      item.setText(sTipos)
 
       # Columna 5: Primera Detección (tiempo desde inicio)
       fTiempoDesdeDeteccion = time.time() - dInfo['PrimeraMencion']
@@ -1017,9 +1041,16 @@ class FormPpal:
         sTiempo = f'{int(fTiempoDesdeDeteccion / 60)}m {int(fTiempoDesdeDeteccion % 60)}s'
       else:
         sTiempo = f'{int(fTiempoDesdeDeteccion / 3600)}h {int((fTiempoDesdeDeteccion % 3600) / 60)}m'
-      item = QTableWidgetItem(sTiempo)
-      item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-      self._qtTablaMonitor.setItem(iFila, 5, item)
+      item = self._qtTablaMonitor.item(iFila, 5)
+      if item is None:
+        item = QTableWidgetItem()
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._qtTablaMonitor.setItem(iFila, 5, item)
+      item.setText(sTiempo)
+
+    # Desbloquear señales y forzar actualización visual
+    self._qtTablaMonitor.blockSignals(False)
+    self._qtTablaMonitor.viewport().update()
 
 
   def _LimpiarHistorialMonitor(self):
