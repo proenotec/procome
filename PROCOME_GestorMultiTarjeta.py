@@ -831,15 +831,20 @@ class GestorMultiTarjeta:
         iErrores = 0
 
         for idx, iByte in enumerate(lBytesRcpCSerie):
-          xRta = oConstrTramaRcp.Construir(iByte)
+          xRta = oConstrTramaRcp.ConstruirTrama(iByte)
 
-          # Mostrar qué devuelve el constructor
-          if xRta == 'TramaIncompleta':
-            # No mostrar cada byte, solo resumen al final
+          # ConstruirTrama devuelve:
+          # - 0: trama incompleta (aún esperando más bytes)
+          # - valor negativo: error
+          # - lista: trama completa
+
+          if xRta == 0:
+            # Trama incompleta, seguir esperando bytes
             pass
-          elif xRta == 'Error':
+          elif type(xRta) is int and xRta < 0:
+            # Error en construcción
             iErrores += 1
-            print(f'[LECTOR MONITOR] Error en byte {idx+1}/{iNumBytes} (0x{iByte:02X})')
+            print(f'[LECTOR MONITOR] Error {xRta} en byte {idx+1}/{iNumBytes} (0x{iByte:02X})')
             oConstrTramaRcp.Reset()
           elif type(xRta) is list:
             # Trama recibida completa
