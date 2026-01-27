@@ -823,17 +823,27 @@ class GestorMultiTarjeta:
           print(f'[LECTOR MONITOR] Bytes leídos: {sHex}')
 
         # Procesar bytes recibidos (fuera del lock)
-        for iByte in lBytesRcpCSerie:
+        iNumBytes = len(lBytesRcpCSerie)
+        if iNumBytes > 0:
+          print(f'[LECTOR MONITOR] Procesando {iNumBytes} bytes...')
+
+        iTramasCompletadas = 0
+        iErrores = 0
+
+        for idx, iByte in enumerate(lBytesRcpCSerie):
           xRta = oConstrTramaRcp.Construir(iByte)
 
+          # Mostrar qué devuelve el constructor
           if xRta == 'TramaIncompleta':
-            continue
+            # No mostrar cada byte, solo resumen al final
+            pass
           elif xRta == 'Error':
-            if self._sModoMensajes != 'hex':
-              print('[LECTOR MONITOR] Error en construcción de trama')
+            iErrores += 1
+            print(f'[LECTOR MONITOR] Error en byte {idx+1}/{iNumBytes} (0x{iByte:02X})')
             oConstrTramaRcp.Reset()
           elif type(xRta) is list:
             # Trama recibida completa
+            iTramasCompletadas += 1
             lTramaRcp = xRta.copy()
             oConstrTramaRcp.Reset()
 
@@ -845,6 +855,13 @@ class GestorMultiTarjeta:
             if self._oDetectorDispositivos:
               bRegistrado = self._oDetectorDispositivos.RegistrarTrama(lTramaRcp)
               print(f'[LECTOR MONITOR] Trama registrada: {bRegistrado}')
+          else:
+            # Respuesta inesperada del constructor
+            print(f'[LECTOR MONITOR] Constructor devolvió valor inesperado: {xRta} (tipo: {type(xRta)})')
+
+        # Resumen de procesamiento
+        if iNumBytes > 0:
+          print(f'[LECTOR MONITOR] Resumen: {iNumBytes} bytes procesados, {iTramasCompletadas} tramas completadas, {iErrores} errores')
 
         # Pausa para reducir carga del CPU
         time.sleep(0.02)  # 20ms
