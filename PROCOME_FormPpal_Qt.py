@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.7.1"
+  _VERSION = "2.7.2"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -961,45 +961,61 @@ class FormPpal:
     # Obtener dispositivos detectados
     dDispositivos = self._oGestorTarjetas.ObtenerDispositivosDetectados()
 
+    # DEBUG: Mostrar qué dispositivos tenemos
+    print(f'[TABLA] Actualizando con {len(dDispositivos)} dispositivos: {list(dDispositivos.keys())}')
+
     # Ordenar por dirección
     lDirecciones = sorted(dDispositivos.keys())
-
-    # Bloquear señales durante la actualización para mejor performance
-    self._qtTablaMonitor.blockSignals(True)
 
     # Ajustar número de filas
     iFilasActuales = self._qtTablaMonitor.rowCount()
     iFilasNecesarias = len(lDirecciones)
 
+    print(f'[TABLA] Filas actuales: {iFilasActuales}, necesarias: {iFilasNecesarias}')
+
     # Si cambia el número de filas, recrear la tabla
     if iFilasActuales != iFilasNecesarias:
-      self._qtTablaMonitor.clearContents()
+      print(f'[TABLA] Recreando tabla ({iFilasActuales} -> {iFilasNecesarias} filas)')
       self._qtTablaMonitor.setRowCount(iFilasNecesarias)
 
     # Llenar tabla
     for iFila, iDireccion in enumerate(lDirecciones):
       dInfo = dDispositivos[iDireccion]
 
+      print(f'[TABLA] Fila {iFila}: Dir={iDireccion}, Estado={dInfo["Estado"]}, Contador={dInfo["Contador"]}')
+
       # Columna 0: Dirección
       item = self._qtTablaMonitor.item(iFila, 0)
+      bCreado = False
       if item is None:
         item = QTableWidgetItem()
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self._qtTablaMonitor.setItem(iFila, 0, item)
+        bCreado = True
       item.setText(str(dInfo['Direccion']))
+      if bCreado:
+        print(f'[TABLA]   Col 0 (Dir): Creado nuevo item = {dInfo["Direccion"]}')
+      else:
+        print(f'[TABLA]   Col 0 (Dir): Actualizado item = {dInfo["Direccion"]}')
 
       # Columna 1: Estado (con color)
       sEstado = dInfo['Estado']
       item = self._qtTablaMonitor.item(iFila, 1)
+      bCreado = False
       if item is None:
         item = QTableWidgetItem()
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self._qtTablaMonitor.setItem(iFila, 1, item)
+        bCreado = True
       item.setText(sEstado)
       if sEstado == 'Activo':
         item.setBackground(QColor('#90EE90'))  # Verde claro
       else:
         item.setBackground(QColor('#FFB6C1'))  # Rojo claro
+      if bCreado:
+        print(f'[TABLA]   Col 1 (Estado): Creado nuevo item = {sEstado}')
+      else:
+        print(f'[TABLA]   Col 1 (Estado): Actualizado item = {sEstado}')
 
       # Columna 2: Última Actividad (tiempo transcurrido)
       fTiempoDesdeActividad = time.time() - dInfo['UltimaActividad']
@@ -1010,19 +1026,31 @@ class FormPpal:
       else:
         sTiempo = f'{int(fTiempoDesdeActividad / 3600)}h {int((fTiempoDesdeActividad % 3600) / 60)}m'
       item = self._qtTablaMonitor.item(iFila, 2)
+      bCreado = False
       if item is None:
         item = QTableWidgetItem()
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self._qtTablaMonitor.setItem(iFila, 2, item)
+        bCreado = True
       item.setText(sTiempo)
+      if bCreado:
+        print(f'[TABLA]   Col 2 (ÚltAct): Creado nuevo item = {sTiempo}')
+      else:
+        print(f'[TABLA]   Col 2 (ÚltAct): Actualizado item = {sTiempo}')
 
       # Columna 3: Contador de tramas
       item = self._qtTablaMonitor.item(iFila, 3)
+      bCreado = False
       if item is None:
         item = QTableWidgetItem()
         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self._qtTablaMonitor.setItem(iFila, 3, item)
+        bCreado = True
       item.setText(str(dInfo['Contador']))
+      if bCreado:
+        print(f'[TABLA]   Col 3 (Contador): Creado nuevo item = {dInfo["Contador"]}')
+      else:
+        print(f'[TABLA]   Col 3 (Contador): Actualizado item = {dInfo["Contador"]}')
 
       # Columna 4: Tipos de mensajes (ASDU)
       lTipos = sorted(dInfo['TiposMensajes'])
@@ -1048,9 +1076,11 @@ class FormPpal:
         self._qtTablaMonitor.setItem(iFila, 5, item)
       item.setText(sTiempo)
 
-    # Desbloquear señales y forzar actualización visual
-    self._qtTablaMonitor.blockSignals(False)
+    print(f'[TABLA] Actualización completada - Forzando repaint')
+    # Forzar actualización visual
     self._qtTablaMonitor.viewport().update()
+    self._qtTablaMonitor.update()
+    self._qApp.processEvents()
 
 
   def _LimpiarHistorialMonitor(self):
