@@ -564,6 +564,8 @@ class GestorMultiTarjeta:
     self._bModoMonitor = False
     self._oDetectorDispositivos = None
     self._threadVigilante = None
+    self._threadLectorMonitor = None
+    self._bLectorMonitorRunning = False
 
 
   def SetCallbacks(self, fnEstado=None, fnMedidas=None, fnEstados=None, fnDatosEquipo=None, fnOrden=None, fnBeepTransmision=None, fnBeepRecepcion=None):
@@ -673,6 +675,14 @@ class GestorMultiTarjeta:
       print('[MODO MONITOR] Escuchando pasivamente el bus RS-485...')
       print('[MODO MONITOR] NO se transmitirá ningún dato')
 
+      # Iniciar thread lector para modo monitor
+      if self._threadLectorMonitor is None or not self._threadLectorMonitor.is_alive():
+        self._threadLectorMonitor = threading.Thread(
+          target=self._ThreadLectorMonitor,
+          daemon=True
+        )
+        self._threadLectorMonitor.start()
+
       # Iniciar thread vigilante para timeouts
       if self._threadVigilante is None or not self._threadVigilante.is_alive():
         self._threadVigilante = threading.Thread(
@@ -716,7 +726,10 @@ class GestorMultiTarjeta:
 
   def PararComunicacion(self):
     """Para la comunicación de todas las tarjetas"""
-    # Detener todos los threads
+    # Detener thread lector de monitor si existe
+    self._bLectorMonitorRunning = False
+
+    # Detener todos los threads de tarjetas
     for oThread in self._lThreads:
       oThread.Detener()
 
@@ -752,6 +765,72 @@ class GestorMultiTarjeta:
         time.sleep(1.0)
       except:
         break
+
+
+  def _ThreadLectorMonitor(self):
+    """Thread que lee del puerto serie en modo monitor y registra tramas"""
+    import PROCOME_ConstruirTramaRcp
+
+    # Crear constructor de tramas propio para este thread
+    oConstrTramaRcp = PROCOME_ConstruirTramaRcp.PROCOME_ConstruirTramaRcp(0x07)
+
+    self._bLectorMonitorRunning = True
+
+    while self._bLectorMonitorRunning and self._bModoMonitor:
+      try:
+        # Verificar que el puerto esté abierto
+        if not self._oCSerie.is_open:
+          time.sleep(0.1)
+          continue
+
+        with self._oSerialLock:
+          # Verificar de nuevo dentro del lock
+          if not self._oCSerie.is_open:
+            continue
+
+          iBytesDisponibles = self._oCSerie.in_waiting
+          if iBytesDisponibles == 0:
+            continue
+
+          # Leer bytes disponibles (máximo 100 por iteración)
+          lBytesRcpCSerie = []
+          try:
+            for _ in range(min(iBytesDisponibles, 100)):
+              lBytesRcpCSerie.append(ord(self._oCSerie.read(1)))
+          except Exception as e:
+            if self._sModoMensajes != 'hex':
+              print(f'[LECTOR MONITOR] Error al leer puerto serie: {str(e)}')
+            continue
+
+        # Procesar bytes recibidos (fuera del lock)
+        for iByte in lBytesRcpCSerie:
+          xRta = oConstrTramaRcp.Construir(iByte)
+
+          if xRta == 'TramaIncompleta':
+            continue
+          elif xRta == 'Error':
+            if self._sModoMensajes != 'hex':
+              print('[LECTOR MONITOR] Error en construcción de trama')
+            oConstrTramaRcp.Reset()
+          elif type(xRta) is list:
+            # Trama recibida completa
+            lTramaRcp = xRta.copy()
+            oConstrTramaRcp.Reset()
+
+            # Registrar en detector de dispositivos
+            if self._oDetectorDispositivos:
+              self._oDetectorDispositivos.RegistrarTrama(lTramaRcp)
+
+        # Pausa para reducir carga del CPU
+        time.sleep(0.02)  # 20ms
+
+      except Exception as e:
+        if self._sModoMensajes != 'hex':
+          print(f'[LECTOR MONITOR] ERROR en thread: {str(e)}')
+        time.sleep(0.1)
+
+    if self._sModoMensajes != 'hex':
+      print('[LECTOR MONITOR] Thread finalizado')
 
 
   def ObtenerDispositivosDetectados(self):
