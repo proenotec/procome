@@ -771,13 +771,25 @@ class GestorMultiTarjeta:
     """Thread que lee del puerto serie en modo monitor y registra tramas"""
     import PROCOME_ConstruirTramaRcp
 
+    print('[LECTOR MONITOR] Thread iniciado')
+
     # Crear constructor de tramas propio para este thread
     oConstrTramaRcp = PROCOME_ConstruirTramaRcp.PROCOME_ConstruirTramaRcp(0x07)
 
     self._bLectorMonitorRunning = True
+    iContadorIteraciones = 0
+    iUltimoReporte = 0
 
     while self._bLectorMonitorRunning and self._bModoMonitor:
       try:
+        iContadorIteraciones += 1
+
+        # Reportar estado cada 50 iteraciones (~1 segundo)
+        if iContadorIteraciones - iUltimoReporte >= 50:
+          iUltimoReporte = iContadorIteraciones
+          bPuertoAbierto = self._oCSerie.is_open
+          print(f'[LECTOR MONITOR] Activo - Puerto abierto: {bPuertoAbierto}')
+
         # Verificar que el puerto esté abierto
         if not self._oCSerie.is_open:
           time.sleep(0.1)
@@ -792,6 +804,9 @@ class GestorMultiTarjeta:
           if iBytesDisponibles == 0:
             continue
 
+          # Hay bytes disponibles - informar
+          print(f'[LECTOR MONITOR] {iBytesDisponibles} bytes disponibles')
+
           # Leer bytes disponibles (máximo 100 por iteración)
           lBytesRcpCSerie = []
           try:
@@ -801,6 +816,11 @@ class GestorMultiTarjeta:
             if self._sModoMensajes != 'hex':
               print(f'[LECTOR MONITOR] Error al leer puerto serie: {str(e)}')
             continue
+
+        # Mostrar bytes leídos
+        if len(lBytesRcpCSerie) > 0:
+          sHex = ' '.join([f'{b:02X}' for b in lBytesRcpCSerie])
+          print(f'[LECTOR MONITOR] Bytes leídos: {sHex}')
 
         # Procesar bytes recibidos (fuera del lock)
         for iByte in lBytesRcpCSerie:
@@ -817,9 +837,14 @@ class GestorMultiTarjeta:
             lTramaRcp = xRta.copy()
             oConstrTramaRcp.Reset()
 
+            # Mostrar trama construida
+            sHexTrama = ' '.join([f'{b:02X}' for b in lTramaRcp])
+            print(f'[LECTOR MONITOR] Trama construida ({len(lTramaRcp)} bytes): {sHexTrama}')
+
             # Registrar en detector de dispositivos
             if self._oDetectorDispositivos:
-              self._oDetectorDispositivos.RegistrarTrama(lTramaRcp)
+              bRegistrado = self._oDetectorDispositivos.RegistrarTrama(lTramaRcp)
+              print(f'[LECTOR MONITOR] Trama registrada: {bRegistrado}')
 
         # Pausa para reducir carga del CPU
         time.sleep(0.02)  # 20ms
