@@ -867,8 +867,11 @@ class GestorMultiTarjeta:
         time.sleep(0.02)  # 20ms
 
       except Exception as e:
-        if self._sModoMensajes != 'hex':
-          print(f'[LECTOR MONITOR] ERROR en thread: {str(e)}')
+        import traceback
+        print(f'[LECTOR MONITOR] EXCEPCIÓN CAPTURADA: {str(e)}')
+        print(f'[LECTOR MONITOR] Modo mensajes: {self._sModoMensajes}')
+        print(f'[LECTOR MONITOR] Traceback completo:')
+        traceback.print_exc()
         time.sleep(0.1)
 
     if self._sModoMensajes != 'hex':
