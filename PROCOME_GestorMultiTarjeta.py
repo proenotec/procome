@@ -782,14 +782,6 @@ class GestorMultiTarjeta:
 
     while self._bLectorMonitorRunning and self._bModoMonitor:
       try:
-        iContadorIteraciones += 1
-
-        # Reportar estado cada 50 iteraciones (~1 segundo)
-        if iContadorIteraciones - iUltimoReporte >= 50:
-          iUltimoReporte = iContadorIteraciones
-          bPuertoAbierto = self._oCSerie.is_open
-          print(f'[LECTOR MONITOR] Activo - Puerto abierto: {bPuertoAbierto}')
-
         # Verificar que el puerto esté abierto
         if not self._oCSerie.is_open:
           time.sleep(0.1)
@@ -804,9 +796,6 @@ class GestorMultiTarjeta:
           if iBytesDisponibles == 0:
             continue
 
-          # Hay bytes disponibles - informar
-          print(f'[LECTOR MONITOR] {iBytesDisponibles} bytes disponibles')
-
           # Leer bytes disponibles (máximo 100 por iteración)
           lBytesRcpCSerie = []
           try:
@@ -817,16 +806,8 @@ class GestorMultiTarjeta:
               print(f'[LECTOR MONITOR] Error al leer puerto serie: {str(e)}')
             continue
 
-        # Mostrar bytes leídos
-        if len(lBytesRcpCSerie) > 0:
-          sHex = ' '.join([f'{b:02X}' for b in lBytesRcpCSerie])
-          print(f'[LECTOR MONITOR] Bytes leídos: {sHex}')
-
         # Procesar bytes recibidos (fuera del lock)
         iNumBytes = len(lBytesRcpCSerie)
-        if iNumBytes > 0:
-          print(f'[LECTOR MONITOR] Procesando {iNumBytes} bytes...')
-
         iTramasCompletadas = 0
         iErrores = 0
 
@@ -863,10 +844,6 @@ class GestorMultiTarjeta:
           else:
             # Respuesta inesperada del constructor
             print(f'[LECTOR MONITOR] Constructor devolvió valor inesperado: {xRta} (tipo: {type(xRta)})')
-
-        # Resumen de procesamiento
-        if iNumBytes > 0:
-          print(f'[LECTOR MONITOR] Resumen: {iNumBytes} bytes procesados, {iTramasCompletadas} tramas completadas, {iErrores} errores')
 
         # Pausa para reducir carga del CPU
         time.sleep(0.02)  # 20ms
