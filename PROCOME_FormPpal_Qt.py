@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.7.3"
+  _VERSION = "2.7.4"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -1768,8 +1768,10 @@ class FormPpal:
     self._qtConsoleWindow.show()
     # Procesar eventos pendientes para asegurar que las ventanas estén completamente renderizadas
     self._qApp.processEvents()
-    # Pequeño delay para asegurar que el gestor de ventanas procese la geometría
+    # Delays múltiples para asegurar reposicionamiento en diferentes gestores de ventanas
     QTimer.singleShot(100, self._ReorganizarVentanas)
+    QTimer.singleShot(300, self._ReorganizarVentanas)
+    QTimer.singleShot(500, self._ReorganizarVentanas)
 
   def _ReorganizarVentanas(self):
     """Reorganiza las ventanas en la pantalla: consola MITAD IZQUIERDA, programa MITAD DERECHA"""
@@ -1782,13 +1784,19 @@ class FormPpal:
     # Calcular mitades exactas
     iMitadAncho = screenGeometry.width() // 2
 
+    print(f'[VENTANAS] Reorganizando: Pantalla {screenGeometry.width()}x{screenGeometry.height()}, Mitad={iMitadAncho}')
+
     # CONSOLA: Mitad izquierda completa (0, 0, mitad, alto_total)
     consoleX = screenGeometry.x()
     consoleY = screenGeometry.y()
     consoleWidth = iMitadAncho
     consoleHeight = screenGeometry.height()
 
+    # CRÍTICO: Forzar modo normal (no maximizada) antes de setGeometry
+    self._qtConsoleWindow.showNormal()
+    self._qApp.processEvents()
     self._qtConsoleWindow.setGeometry(consoleX, consoleY, consoleWidth, consoleHeight)
+    print(f'[VENTANAS] Consola → X={consoleX}, Y={consoleY}, W={consoleWidth}, H={consoleHeight}')
 
     # PROGRAMA: Mitad derecha completa (mitad, 0, mitad, alto_total)
     mainWindowX = screenGeometry.x() + iMitadAncho
@@ -1796,7 +1804,14 @@ class FormPpal:
     mainWindowWidth = iMitadAncho
     mainWindowHeight = screenGeometry.height()
 
+    # CRÍTICO: Forzar modo normal (no maximizada) antes de setGeometry
+    self._qtWindow.showNormal()
+    self._qApp.processEvents()
     self._qtWindow.setGeometry(mainWindowX, mainWindowY, mainWindowWidth, mainWindowHeight)
+    print(f'[VENTANAS] Principal → X={mainWindowX}, Y={mainWindowY}, W={mainWindowWidth}, H={mainWindowHeight}')
+
+    # Forzar actualización
+    self._qApp.processEvents()
 
   def _EscribirEnConsolaThreadSafe(self, texto):
     """Escribe texto en la ventana de consola (thread-safe, llamado vía señal Qt)

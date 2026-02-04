@@ -1,0 +1,16 @@
+[2026-01-28 17:56:34] Ping iniciado a 100.0.0.1 con parámetros: -c 1 -W 1 -I enp5s0
+[2026-01-28 17:56:34] Monitoreo iniciado - El host 100.0.0.1 está en la red
+[2026-01-28 17:59:42] DESAPARECIÓ: El host 100.0.0.1 es inaccesible
+[2026-01-28 18:00:37] REGRESÓ: El host 100.0.0.1 está nuevamente disponible
+
+======================================================================
+ESTADÍSTICAS FINALES
+======================================================================
+Host monitoreado: 100.0.0.1
+Tiempo total: 0:22:21.174924
+Total de pings: 1303
+Pings exitosos: 1275
+Pings fallidos: 28
+Disponibilidad: 97.85%
+Cambios de estado: 2
+======================================================================

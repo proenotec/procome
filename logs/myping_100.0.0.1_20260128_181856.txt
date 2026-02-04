@@ -1,0 +1,14 @@
+[2026-01-28 18:18:56] Ping iniciado a 100.0.0.1 con parámetros: -c 1 -W 1 -I enp5s0
+[2026-01-28 18:18:56] Monitoreo iniciado - El host 100.0.0.1 está en la red
+
+======================================================================
+ESTADÍSTICAS FINALES
+======================================================================
+Host monitoreado: 100.0.0.1
+Tiempo total: 0:00:01.940857
+Total de pings: 2
+Pings exitosos: 2
+Pings fallidos: 0
+Disponibilidad: 100.00%
+Cambios de estado: 0
+======================================================================
