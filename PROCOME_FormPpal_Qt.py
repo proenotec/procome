@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.7.5"
+  _VERSION = "2.7.6"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -1799,10 +1799,19 @@ class FormPpal:
     # Marcar como movida por usuario (bypass window manager placement)
     self._qtConsoleWindow.setAttribute(Qt.WidgetAttribute.WA_Moved, True)
 
+    # CRÍTICO: Eliminar restricciones de tamaño temporalmente para forzar resize
+    self._qtConsoleWindow.setMinimumSize(0, 0)
+    self._qtConsoleWindow.setMaximumSize(16777215, 16777215)  # Máximo de Qt
+    self._qApp.processEvents()
+
     # Usar move() y resize() separados (GNOME respeta mejor que setGeometry)
     self._qtConsoleWindow.move(consoleX, consoleY)
     self._qApp.processEvents()
     self._qtConsoleWindow.resize(consoleWidth, consoleHeight)
+    self._qApp.processEvents()
+
+    # Forzar geometría con setGeometry también (doble ataque)
+    self._qtConsoleWindow.setGeometry(consoleX, consoleY, consoleWidth, consoleHeight)
     self._qApp.processEvents()
 
     print(f'[VENTANAS] Consola → X={consoleX}, Y={consoleY}, W={consoleWidth}, H={consoleHeight}')
@@ -1827,10 +1836,19 @@ class FormPpal:
     # Marcar como movida por usuario
     self._qtWindow.setAttribute(Qt.WidgetAttribute.WA_Moved, True)
 
+    # CRÍTICO: Eliminar restricciones de tamaño temporalmente para forzar resize
+    self._qtWindow.setMinimumSize(0, 0)
+    self._qtWindow.setMaximumSize(16777215, 16777215)  # Máximo de Qt
+    self._qApp.processEvents()
+
     # Usar move() y resize() separados
     self._qtWindow.move(mainWindowX, mainWindowY)
     self._qApp.processEvents()
     self._qtWindow.resize(mainWindowWidth, mainWindowHeight)
+    self._qApp.processEvents()
+
+    # Forzar geometría con setGeometry también (doble ataque)
+    self._qtWindow.setGeometry(mainWindowX, mainWindowY, mainWindowWidth, mainWindowHeight)
     self._qApp.processEvents()
 
     print(f'[VENTANAS] Principal → X={mainWindowX}, Y={mainWindowY}, W={mainWindowWidth}, H={mainWindowHeight}')
