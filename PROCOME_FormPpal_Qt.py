@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "2.7.4"
+  _VERSION = "2.7.5"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -1792,11 +1792,27 @@ class FormPpal:
     consoleWidth = iMitadAncho
     consoleHeight = screenGeometry.height()
 
-    # CRÍTICO: Forzar modo normal (no maximizada) antes de setGeometry
+    # Forzar modo normal y reposicionar con move() + resize() (mejor compatibilidad GNOME)
     self._qtConsoleWindow.showNormal()
     self._qApp.processEvents()
-    self._qtConsoleWindow.setGeometry(consoleX, consoleY, consoleWidth, consoleHeight)
+
+    # Marcar como movida por usuario (bypass window manager placement)
+    self._qtConsoleWindow.setAttribute(Qt.WidgetAttribute.WA_Moved, True)
+
+    # Usar move() y resize() separados (GNOME respeta mejor que setGeometry)
+    self._qtConsoleWindow.move(consoleX, consoleY)
+    self._qApp.processEvents()
+    self._qtConsoleWindow.resize(consoleWidth, consoleHeight)
+    self._qApp.processEvents()
+
     print(f'[VENTANAS] Consola → X={consoleX}, Y={consoleY}, W={consoleWidth}, H={consoleHeight}')
+
+    # Verificar posición real después del movimiento
+    realX = self._qtConsoleWindow.x()
+    realY = self._qtConsoleWindow.y()
+    realW = self._qtConsoleWindow.width()
+    realH = self._qtConsoleWindow.height()
+    print(f'[VENTANAS] Consola REAL → X={realX}, Y={realY}, W={realW}, H={realH}')
 
     # PROGRAMA: Mitad derecha completa (mitad, 0, mitad, alto_total)
     mainWindowX = screenGeometry.x() + iMitadAncho
@@ -1804,14 +1820,27 @@ class FormPpal:
     mainWindowWidth = iMitadAncho
     mainWindowHeight = screenGeometry.height()
 
-    # CRÍTICO: Forzar modo normal (no maximizada) antes de setGeometry
+    # Forzar modo normal y reposicionar con move() + resize()
     self._qtWindow.showNormal()
     self._qApp.processEvents()
-    self._qtWindow.setGeometry(mainWindowX, mainWindowY, mainWindowWidth, mainWindowHeight)
+
+    # Marcar como movida por usuario
+    self._qtWindow.setAttribute(Qt.WidgetAttribute.WA_Moved, True)
+
+    # Usar move() y resize() separados
+    self._qtWindow.move(mainWindowX, mainWindowY)
+    self._qApp.processEvents()
+    self._qtWindow.resize(mainWindowWidth, mainWindowHeight)
+    self._qApp.processEvents()
+
     print(f'[VENTANAS] Principal → X={mainWindowX}, Y={mainWindowY}, W={mainWindowWidth}, H={mainWindowHeight}')
 
-    # Forzar actualización
-    self._qApp.processEvents()
+    # Verificar posición real
+    realX = self._qtWindow.x()
+    realY = self._qtWindow.y()
+    realW = self._qtWindow.width()
+    realH = self._qtWindow.height()
+    print(f'[VENTANAS] Principal REAL → X={realX}, Y={realY}, W={realW}, H={realH}')
 
   def _EscribirEnConsolaThreadSafe(self, texto):
     """Escribe texto en la ventana de consola (thread-safe, llamado vía señal Qt)
