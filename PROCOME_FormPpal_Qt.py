@@ -2036,10 +2036,14 @@ class FormPpal:
             temp_filename = temp_file.name
 
           if sys.platform.startswith('linux'):
-            subprocess.run(['aplay', '-q', temp_filename],
-                          stdout=subprocess.DEVNULL,
-                          stderr=subprocess.DEVNULL,
-                          timeout=1)
+            # Intentar varios reproductores: paplay (PipeWire/PulseAudio), aplay (ALSA), pw-play (PipeWire nativo)
+            for cmd in [['paplay', temp_filename], ['aplay', '-q', temp_filename], ['pw-play', temp_filename]]:
+              try:
+                result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1)
+                if result.returncode == 0:
+                  break
+              except (FileNotFoundError, subprocess.TimeoutExpired):
+                continue
           elif sys.platform == 'darwin':
             subprocess.run(['afplay', temp_filename],
                           stdout=subprocess.DEVNULL,
