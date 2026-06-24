@@ -355,6 +355,52 @@ El proyecto PROCOME ahora es más accesible, fácil de instalar y usar, mantenie
 
 ---
 
+## v3.0.0 — Arbitraje de bus serial multi-tarjeta + jitter anti-colisión
+
+**Fecha**: 24 de Junio de 2026
+**Autor**: OpenCode
+
+### Contexto
+
+Hasta 6 tarjetas PROCOME comparten un bus RS-485 half-duplex. Cada tarjeta ejecuta su propio thread que puede transmitir en cualquier momento. Sin coordinación, las transmisiones simultáneas colisionan y se corrompen.
+
+### Solución
+
+Se implementó un sistema de arbitraje de bus mediante un `threading.Lock()` (`_oBusLock`) que serializa todas las transmisiones. El lock se adquiere justo antes de escribir al puerto y se libera solo cuando la transacción completa (transmitir + recibir respuesta o timeout).
+
+### Cambios realizados
+
+- **`PROCOME_GestorMultiTarjeta.py`**:
+  - Nuevo `self._oBusLock = threading.Lock()` en `GestorMultiTarjeta.__init__()`
+  - `ThreadTarjeta` recibe y propaga `oBusLock` a su máquina de estados
+  - Tras cada `ProcesarEventos`, se llama `LiberarBusSiReposo()` para soltar el lock cuando la transacción termina
+
+- **`PROCOME_MaqEstados.py`**:
+  - Nuevos imports: `random`, `time`
+  - Nuevo parámetro `oBusLock=None` en el constructor
+  - Nuevas variables: `self._oBusLock`, `self._bTengoBus`
+  - `_TransmitirTrama()`: adquiere `_oBusLock` (si no lo tiene ya) y añade jitter aleatorio 0–50ms antes de escribir
+  - Nuevo método `LiberarBusSiReposo()`: libera `_oBusLock` cuando `_sEstadoCom == 'Reposo'`
+
+- **`PROCOME_FormPpal_Qt.py`**: Versión actualizada de `2.7.7` a `3.0.0`
+
+### Cómo funciona
+
+1. Thread A necesita transmitir → `_TransmitirTrama()` adquiere `_oBusLock` → escribe con jitter aleatorio → mantiene el lock
+2. Thread A espera respuesta (estado `EspRcp`) — el lock sigue retenido
+3. Thread B intenta transmitir → `_TransmitirTrama()` se bloquea en `_oBusLock.acquire()` hasta que Thread A termine
+4. Thread A recibe respuesta o timeout → estado `Reposo` → `LiberarBusSiReposo()` suelta el lock
+5. Thread B adquiere el lock y transmite
+
+### Archivos modificados
+
+- `PROCOME_GestorMultiTarjeta.py` — ~10 líneas
+- `PROCOME_MaqEstados.py` — ~20 líneas
+- `PROCOME_FormPpal_Qt.py` — 1 línea
+- `AGENTS.md` — documentación actualizada
+
+---
+
 **Fecha**: 20 de Noviembre de 2025
 **Autor**: Claude Code
 **Versión**: 2.0

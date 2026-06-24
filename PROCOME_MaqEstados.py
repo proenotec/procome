@@ -12,6 +12,8 @@
 # #### Dependencias
 # #############################################################################################################################
 
+import random
+import time
 import PROCOME_General
 import PROCOME_ConstruirTramaTrm
 import PROCOME_AnalizarTramaRcp
@@ -28,7 +30,7 @@ class PROCOME_MaqEstados:
   # **** Constructor
   # ***************************************************************************************************************************
 
-  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None, fnCallbackBeepTransmision=None, fnCallbackBeepRecepcion=None, bModoMonitor=False):
+  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None, fnCallbackBeepTransmision=None, fnCallbackBeepRecepcion=None, bModoMonitor=False, oBusLock=None):
 
     # **** Constantes *********************************************************************************************************
 
@@ -102,6 +104,10 @@ class PROCOME_MaqEstados:
     self._fnCallbackBeepTransmision = fnCallbackBeepTransmision
     self._fnCallbackBeepRecepcion = fnCallbackBeepRecepcion
     self._bEstadoComunicacionAnterior= None  # Para detectar cambios de estado
+
+    # Arbitraje de bus serial compartido
+    self._oBusLock = oBusLock  # Lock compartido entre threads (desde GestorMultiTarjeta)
+    self._bTengoBus = False    # True cuando este thread posee el lock del bus
 
 
     # **** Fin ****************************************************************************************************************
@@ -1310,10 +1316,27 @@ class PROCOME_MaqEstados:
     if self._bModoMonitor:
       return
 
+    # Arbitraje de bus: adquirir el lock compartido antes de transmitir
+    # (bloquea hasta que el hilo que tiene el bus termine su transacción)
+    if not self._bTengoBus and self._oBusLock is not None:
+      self._oBusLock.acquire()
+      self._bTengoBus = True
+      # Jitter aleatorio 0-50ms para desincronizar los threads
+      time.sleep(random.uniform(0, 0.05))
+
     self._oCanalSerie.rts= True
     self._oCanalSerie.write(bytes(self._lTramaTrm))
     # & self._oCanalSerie.rts= False
     self._oFormPpal.AvanzarPilotoTrm()
     return
+
+
+  def LiberarBusSiReposo(self):
+    """Libera el lock del bus si la máquina de estados ha vuelto a Reposo"""
+    if self._bTengoBus and self._sEstadoCom == 'Reposo' and self._oBusLock is not None:
+      self._oBusLock.release()
+      self._bTengoBus = False
+      return True
+    return False
 
 # #############################################################################################################################

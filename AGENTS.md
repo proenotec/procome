@@ -27,6 +27,7 @@ No tests, no linter, no typechecker exist. Test manually with real serial hardwa
 
 - **Flat monorepo**, no Python package structure. All modules are standalone `.py` files importing each other by name.
 - **Multi-threaded**: Each enabled tarjeta (1–6) runs its own `ThreadTarjeta` daemon thread. All threads share one serial port, protected by `threading.RLock()` (`_oSerialLock`). Only thread 0 reads the port and distributes frames to all threads via `queue.Queue`.
+- **Bus arbitration via `_oBusLock`**: A `threading.Lock()` in `GestorMultiTarjeta` serializes all transmissions across threads. Each thread acquires `_oBusLock` inside `_TransmitirTrama()` just before writing, with a 0–50ms random jitter to desync periodic polls. The lock is released only when the thread's state machine returns to `_sEstadoCom == 'Reposo'` (transaction complete), checked via `LiberarBusSiReposo()` after every `ProcesarEventos` call.
 - **GUI thread-safety**: `SignalEmitter` class bridges thread → GUI via Qt signals (`actualizarMedidas`, `actualizarEstados`, etc.). Never call `setText()` from a thread directly.
 - **State machine** (`PROCOME_MaqEstados.py`): Hierarchical — 4 super-states (Enlace, Inicializacion, Bucle, Control) × sub-states. Event loop iterates via `while(sEvento != 'Procesado')` returning `'ProcesarDeNuevo'` to re-enter.
 - **Modo Monitor**: Passive RS-485 listener. Uses a separate `_ThreadLectorMonitor` + `_ThreadVigilanteTimeouts`. Detects devices via `DetectorDispositivos.py`, filtered to PRM=0 (secondary/slave responses) only.
@@ -37,7 +38,7 @@ No tests, no linter, no typechecker exist. Test manually with real serial hardwa
 |---|---|
 | `PROCOME_Arranque_Qt.py` | Qt app entrypoint (loads config, creates serial port, launches `FormPpal`) |
 | `PROCOME_FormPpal_Qt.py` | Main GUI: tabbed interface (one per tarjeta), console window, all dialogs |
-| `PROCOME_GestorMultiTarjeta.py` | Orchestrates threads, distributes frames, owns `_oSerialLock` |
+| `PROCOME_GestorMultiTarjeta.py` | Orchestrates threads, distributes frames, owns `_oSerialLock` and `_oBusLock` |
 | `PROCOME_MaqEstados.py` | PROCOME protocol state machine per tarjeta |
 | `FichConfig.py` | XML config read/write with type validation via setter methods |
 
@@ -55,6 +56,7 @@ No tests, no linter, no typechecker exist. Test manually with real serial hardwa
 - Linux user must be in `dialout` group.
 - RTS is set to `False` before transmit (RS-485 control).
 - Serial port is opened once in `GestorMultiTarjeta.ArrancarComunicacion()` under lock, closed in `PararComunicacion()`.
+- Bus arbitration (`_oBusLock`) ensures only one thread transmits at a time; see Architecture above.
 
 ## Dependencies
 

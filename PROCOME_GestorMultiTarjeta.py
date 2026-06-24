@@ -59,7 +59,7 @@ class ThreadTarjeta(threading.Thread):
   def __init__(self, iNrTarjeta, iDirRemota, bTestsHabilitados, oCSerie, oSerialLock,
                oTelegram, iDebug, fnCallbackEstado, fnCallbackMedidas, fnCallbackEstados,
                fnCallbackDatosEquipo, fnCallbackOrden, fnCallbackBeepTransmision, fnCallbackBeepRecepcion,
-               iNrMedidas, iNrEstados, oGestor):
+               iNrMedidas, iNrEstados, oGestor, oBusLock=None):
 
     threading.Thread.__init__(self)
     self.daemon = True  # Thread daemon para que se cierre al cerrar la aplicación
@@ -76,6 +76,7 @@ class ThreadTarjeta(threading.Thread):
     self._oSerialLock = oSerialLock
     self._oTelegram = oTelegram
     self._oGestor = oGestor  # Referencia al gestor para sistema de turnos
+    self._oBusLock = oBusLock  # Lock de arbitraje de bus serial
     self._qTramas = queue.Queue()  # Cola para recibir tramas completas
 
     # Callbacks al GUI
@@ -117,7 +118,8 @@ class ThreadTarjeta(threading.Thread):
       iDebug,
       oTelegram,
       fnCallbackBeepTransmision=self._fnCallbackBeepTransmision,
-      fnCallbackBeepRecepcion=self._fnCallbackBeepRecepcion
+      fnCallbackBeepRecepcion=self._fnCallbackBeepRecepcion,
+      oBusLock=self._oBusLock
     )
 
     # Control de tiempo
@@ -195,6 +197,9 @@ class ThreadTarjeta(threading.Thread):
             self._ProcesarRespuestaMaqEstados(Rta)
           finally:
             self._oSerialLock.release()
+
+          # Liberar el lock del bus si la transacción ha terminado
+          self._oMaqEstados.LiberarBusSiReposo()
         else:
           # Para eventos de timeout, verificar también si el puerto está abierto
           if sEvento.startswith('Timeout') and not self._oCSerie.is_open:
@@ -226,6 +231,8 @@ class ThreadTarjeta(threading.Thread):
 
           Rta = self._oMaqEstados.ProcesarEventos(sEvento, xDato)
           self._ProcesarRespuestaMaqEstados(Rta)
+          # Liberar el lock del bus si la transacción ha terminado
+          self._oMaqEstados.LiberarBusSiReposo()
       except Exception as e:
         # Solo mostrar error si no es por puerto cerrado (situación esperada al parar)
         # y si no estamos en modo HEX
@@ -537,6 +544,9 @@ class GestorMultiTarjeta:
     # Lock para sincronizar acceso al puerto serie compartido
     self._oSerialLock = threading.RLock()  # RLock para permitir reentrada desde el mismo thread
 
+    # Lock para arbitraje de bus serial entre threads (evita colisiones en RS-485)
+    self._oBusLock = threading.Lock()
+
     # Threads de las tarjetas (máximo 6)
     self._lThreads = []
 
@@ -642,7 +652,8 @@ class GestorMultiTarjeta:
           fnCallbackBeepRecepcion=self._fnCallbackBeepRecepcion,
           iNrMedidas=self._iNrMedidas,
           iNrEstados=self._iNrEstados,
-          oGestor=self
+          oGestor=self,
+          oBusLock=self._oBusLock
         )
 
         # Aplicar el modo de mensajes configurado
