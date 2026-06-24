@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 2.5.1
+## Versión Actual: 3.0.0
 
 ## Sistema de Versionado
 
@@ -70,6 +70,32 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v3.0.0 (2026-06-24)
+**Arbitraje de bus serial multi-tarjeta + timeout anti-colisión**
+
+Características nuevas:
+- ✨ Sistema de arbitraje de bus RS-485 mediante `_oBusLock` (threading.Lock)
+- ✨ Jitter aleatorio 0-50ms antes de cada transmisión para desincronizar threads
+- ✨ Timeout de 0.2s en adquisición del bus lock (evita bloqueos indefinidos)
+
+Mejoras:
+- 🔧 Timeout de recepción (`TmpRcp`) reducido de 1.0s a 0.2s para reintentos más rápidos
+- 🔧 Si un hilo no consigue el bus en 0.2s, salta la transmisión y reintenta después
+- 🔧 Ciclo completo de reintentos reducido de 10s a 2s cuando un dispositivo no responde
+
+Técnico:
+- Nuevo `_oBusLock` en GestorMultiTarjeta, propagado a cada máquina de estados
+- `_TransmitirTrama()` adquiere el lock con timeout y libera al volver a `Reposo`
+- `LiberarBusSiReposo()` libera el lock automáticamente al finalizar la transacción
+- Primera versión con OpenCode
+
+### v2.7.7 (2026-06-24)
+**Corrección de bugs en FichConfig y MaqEstados**
+
+Correcciones:
+- 🐛 `FichConfig.py:459`: `bHayError = True` → `iHayError = 2` (NameError)
+- 🐛 `PROCOME_MaqEstados.py:189`: `self._sEstado[0]` → `self._lEstado[0]` (AttributeError)
 
 ### v2.5.1 (2025-12-04)
 **Eliminación de mensajes de debug**
