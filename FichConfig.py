@@ -456,7 +456,7 @@ class FichConfig:
         if not sNombre in tNombreParametrosEsperados :
           if iHayError < 2 : sMensajes= sMensajes + '- Parametros recibidos pero no esperados:'
           sMensajes= sMensajes + '   ' + sNombre
-          bHayError= True
+          iHayError= 2
           
       if iHayError > 0 :     
         sRetorno= 'ERROR al leer el fichero de configuracion: Los parametros recibidos no coinciden con los esperados'

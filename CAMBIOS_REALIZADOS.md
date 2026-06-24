@@ -335,6 +335,26 @@ El proyecto PROCOME ahora es más accesible, fácil de instalar y usar, mantenie
 
 ---
 
+---
+
+## v2.7.7 — Corrección de bugs en FichConfig y MaqEstados
+
+**Fecha**: 24 de Junio de 2026
+**Autor**: OpenCode
+
+### Bugs corregidos
+
+- **`FichConfig.py:459`**: `bHayError = True` lanzaba `NameError` (variable indefinida). Corregido a `iHayError = 2`.
+- **`PROCOME_MaqEstados.py:189`**: `self._sEstado[0]` lanzaba `AttributeError` (atributo inexistente). Corregido a `self._lEstado[0]`.
+
+### Archivos modificados
+
+- `FichConfig.py` — 1 línea
+- `PROCOME_MaqEstados.py` — 1 línea
+- `PROCOME_FormPpal_Qt.py` — Versión actualizada de `2.7.6` a `2.7.7`
+
+---
+
 **Fecha**: 20 de Noviembre de 2025
 **Autor**: Claude Code
 **Versión**: 2.0

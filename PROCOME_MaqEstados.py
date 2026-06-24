@@ -186,7 +186,7 @@ class PROCOME_MaqEstados:
     if (sEvento not in self._tEventos[4:]) : return 'ERROR DE SOFTWARE: No existe el Evento <' + sEvento + '>' 
 
     if (sEvento == 'Arrancar') and (self._lEstado != ['Enlace', 'Reposo']) :
-      sRta= 'ERROR DE SOFTWARE: Se ha recibido un evento de "Arrancar" en un Estado que no es "Reposo". Estado= <' + self._sEstado[0] + '.' + self._sEstado[1] + '>'
+      sRta= 'ERROR DE SOFTWARE: Se ha recibido un evento de "Arrancar" en un Estado que no es "Reposo". Estado= <' + self._lEstado[0] + '.' + self._lEstado[1] + '>'
       self._CancelarLaComunicacion()
       return sRta
 
