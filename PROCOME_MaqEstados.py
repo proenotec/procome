@@ -37,7 +37,7 @@ class PROCOME_MaqEstados:
     self._bModoMonitor = bModoMonitor  # Modo Monitor pasivo (sin transmisiones)
 
     self._K_iNrMaxIntentos= 10
-    self._K_fTmoRcp_Std_seg= 1.0
+    self._K_fTmoRcp_Std_seg= 0.2
     self._K_fTmoSincrPeriodica_seg=     15.0 # % 10.0 * 60
     self._K_fTmoPetGralPeriodica_seg=   2.0 # % 5.0
     self._K_fTmoPetEstDigPeriodica_seg= 5.0 # % 15.0
@@ -1317,9 +1317,10 @@ class PROCOME_MaqEstados:
       return
 
     # Arbitraje de bus: adquirir el lock compartido antes de transmitir
-    # (bloquea hasta que el hilo que tiene el bus termine su transacción)
+    # Timeout 0.2s para no bloquear si otro hilo está en medio de una transacción
     if not self._bTengoBus and self._oBusLock is not None:
-      self._oBusLock.acquire()
+      if not self._oBusLock.acquire(timeout=0.2):
+        return  # No se pudo adquirir el lock, saltar transmisión
       self._bTengoBus = True
       # Jitter aleatorio 0-50ms para desincronizar los threads
       time.sleep(random.uniform(0, 0.05))
