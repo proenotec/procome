@@ -137,8 +137,12 @@ quiere, con `xprop -id <win> _NET_WM_ALLOWED_ACTIONS` para verificar maximizar.
 
 ## Releases
 
-- Etiqueta `vX.Y.Z` sobre `main` y push a `origin` (Gitea, `git.proenotec.com`).
-- El "lanzamiento" público se publica en GitHub `proenotec/procome` con el binario
-  `PROCOME-Linux` y `PROCOME.cfg`; `actualizar_procome.sh` descarga de ahí
-  (`https://github.com/proenotec/procome/releases/download/vX.Y.Z/PROCOME-Linux`).
+- `origin` es **Forgejo** (`git.proenotec.com`, instancia privada: la API exige token).
+  Etiqueta `vX.Y.Z` sobre `main` y push; el lanzamiento interno se crea con la API de
+  Forgejo (`POST /api/v1/repos/manuel/procome/releases`) adjuntando `PROCOME-Linux` y
+  `PROCOME.cfg`.
+- El "lanzamiento" público se publica en GitHub `proenotec/procome` con el mismo binario;
+  `actualizar_procome.sh` descarga de ahí
+  (`https://github.com/proenotec/procome/releases/download/vX.Y.Z/PROCOME-Linux`), porque
+  la instancia de Forgejo requiere iniciar sesión.
 - El workflow `.github/workflows/build.yml` compila Linux y Windows al crear un release.
