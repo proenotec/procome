@@ -63,7 +63,7 @@ Tienes tres formas de ejecutar PROCOME:
 
 3. **Ruta completa**:
    ```bash
-   /opt/procome/procome
+   /opt/procome/PROCOME
    ```
 
 ### Permisos del puerto serie
@@ -105,7 +105,7 @@ rm -rf ~/.config/procome
 
 | Ubicación | Descripción |
 |-----------|-------------|
-| `/opt/procome/procome` | Ejecutable principal |
+| `/opt/procome/PROCOME` | Ejecutable principal |
 | `/opt/procome/procome.png` | Icono de la aplicación |
 | `/opt/procome/version.txt` | Versión instalada |
 | `/opt/procome/uninstall.sh` | Script de desinstalación |
@@ -175,11 +175,11 @@ Si el download falla:
 2. Intenta descargar manualmente desde:
    https://github.com/proenotec/procome/releases/latest
 
-3. Coloca el ejecutable en `/opt/procome/procome` manualmente:
+3. Coloca el ejecutable en `/opt/procome/PROCOME` manualmente:
    ```bash
    sudo mkdir -p /opt/procome
-   sudo cp PROCOME_Linux /opt/procome/procome
-   sudo chmod +x /opt/procome/procome
+   sudo cp PROCOME_Linux /opt/procome/PROCOME
+   sudo chmod +x /opt/procome/PROCOME
    ```
 
 ## Instalación en otras distribuciones

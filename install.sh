@@ -93,10 +93,11 @@ Type=Application
 Name=PROCOME
 Comment=Programa de Control Modular por Electrónica
 Exec=/opt/procome/PROCOME
-Icon=/opt/procome/procome
+Icon=/opt/procome/procome.png
 Terminal=false
 Categories=Development;Electronics;
 Keywords=procome;rs485;serial;protocol;
+StartupWMClass=PROCOME
 EOF
 
 # Crear icono SVG
