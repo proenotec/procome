@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 3.1.0
+## Versión Actual: 3.1.1
 
 ## Sistema de Versionado
 
@@ -70,6 +70,12 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v3.1.1 (2026-11-23)
+**Botón de maximizar/restaurar en la ventana principal**
+
+Correcciones:
+- 🐛 La ventana principal se creaba con `setFixedSize()`, lo que hacía que el gestor de ventanas deshabilitara maximizar/restaurar (y el redimensionado manual). Ahora arranca con su tamaño natural y se puede maximizar
 
 ### v3.1.0 (2026-11-23)
 **Consola al 40 % y ventana principal al 60 %, sin solaparse**

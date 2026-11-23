@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "3.1.0"
+  _VERSION = "3.1.1"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -169,7 +169,8 @@ class FormPpal:
     # **** Ajustar tamaño de la ventana ***************************************************************************************
 
     self._qtWindow.adjustSize()
-    self._qtWindow.setFixedSize(self._qtWindow.size())
+    # Sin setFixedSize: con tamaño fijo el gestor de ventanas deshabilita el
+    # botón de maximizar/restaurar (y el redimensionado manual).
 
     # **** Indicar en la pantalla los datos del canal serie *******************************************************************
 
