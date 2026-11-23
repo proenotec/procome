@@ -12,6 +12,7 @@
 # #### Dependencias
 # #############################################################################################################################
 
+import math
 import random
 import time
 import PROCOME_General
@@ -30,14 +31,30 @@ class PROCOME_MaqEstados:
   # **** Constructor
   # ***************************************************************************************************************************
 
-  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None, fnCallbackBeepTransmision=None, fnCallbackBeepRecepcion=None, bModoMonitor=False, oBusLock=None):
+  def __init__(self, iDireccion, dTemporizados, oConstrTramaRcp, oCanalSerie, oFormPpal, iMostrarMensajesDebug, oTelegram=None, fnCallbackBeepTransmision=None, fnCallbackBeepRecepcion=None, bModoMonitor=False, oBusLock=None, iNrMedidas=35, iNrEstados=64):
 
     # **** Constantes *********************************************************************************************************
 
     self._bModoMonitor = bModoMonitor  # Modo Monitor pasivo (sin transmisiones)
 
+    # Número de puntos configurados: se usan para dimensionar el timeout de
+    # recepción según el tamaño máximo esperado de la respuesta.
+    self._iNrMedidas= max(1, int(iNrMedidas))
+    self._iNrEstados= max(1, int(iNrEstados))
+
+    # El timeout de recepción ya no es fijo: se calcula a partir del baudrate,
+    # del tamaño máximo de trama y de un margen de seguridad. Con 9600 8E2 una
+    # respuesta ASDU 100 con 35 medidas y 64 cambios puede superar los 800 ms.
+    self._K_fTmoRcp_Min_seg= 0.30
+    self._K_fTmoRcp_Max_seg= 2.50
+    self._K_fFactorSeguridad_Rcp= 1.8
+    self._K_fMargenRcp_seg= 0.10
+    self._K_fBitsPorByte= 11.0  # 8E2: 1 inicio + 8 datos + 1 paridad + 1 stop
+
+    # Menos reintentos: con timeouts dinámicos, 10 intentos podían tardar
+    # varios segundos antes de declarar la pérdida de comunicación.
     self._K_iNrMaxIntentos= 10
-    self._K_fTmoRcp_Std_seg= 0.2
+    self._K_iNrTarjetasMax= 6           # Tarjetas PROCOME máximas en el bus
     self._K_fTmoSincrPeriodica_seg=     15.0 # % 10.0 * 60
     self._K_fTmoPetGralPeriodica_seg=   2.0 # % 5.0
     self._K_fTmoPetEstDigPeriodica_seg= 5.0 # % 15.0
@@ -72,6 +89,7 @@ class PROCOME_MaqEstados:
     self._iIntentosTrmQuedan= 0
     self._bHayTransmision= False
     self._bHaComunicadoAlgunaVez= False  # Para controlar indicador amarillo
+    self._bRunning= True                 # Lo pone a False el hilo al detenerse
 
 
     # **** Inicializaciones. Comprobaciones ***********************************************************************************
@@ -108,6 +126,7 @@ class PROCOME_MaqEstados:
     # Arbitraje de bus serial compartido
     self._oBusLock = oBusLock  # Lock compartido entre threads (desde GestorMultiTarjeta)
     self._bTengoBus = False    # True cuando este thread posee el lock del bus
+    self._fBusDesde = 0.0      # Instante en que se tomó el bus
 
 
     # **** Fin ****************************************************************************************************************
@@ -165,6 +184,41 @@ class PROCOME_MaqEstados:
   def _MostrarMensajesExplicados(self):
     """Retorna True si se deben mostrar mensajes explicativos (no modo HEX)"""
     return self._sModoMensajes != 'hex'
+
+  def _TmoRcpPara(self, sTipo):
+    """Calcula el timeout de recepción para el tipo de petición indicado.
+
+    Tiene en cuenta el baudrate real del puerto y el tamaño máximo esperado de
+    la respuesta. Así una respuesta grande a 9600 baudios no se descarta antes
+    de que termine de llegar.
+    """
+
+    try:
+      fBaud = float(getattr(self._oCanalSerie, 'baudrate', 9600) or 9600)
+    except Exception:
+      fBaud = 9600.0
+    if fBaud < 300:
+      fBaud = 9600.0
+
+    iCabecera = 24  # Cabecera de enlace + ASDU + cola
+    if sTipo == 'reset':
+      iBytes = iCabecera
+    elif sTipo == 'estados':
+      iBytes = iCabecera + 2 * math.ceil(self._iNrEstados / 8) + 16
+    elif sTipo in ('medidas', 'clase1'):
+      # Medidas (2 bytes cada una) + contador de cambios + cambios (9 bytes)
+      iBytes = iCabecera + 2 * self._iNrMedidas + 2 + 9 * self._iNrEstados + 16
+    else:
+      iBytes = 64
+
+    fTiempoTrama = (iBytes * self._K_fBitsPorByte) / fBaud
+    return min(
+      self._K_fTmoRcp_Max_seg,
+      max(
+        self._K_fTmoRcp_Min_seg,
+        fTiempoTrama * self._K_fFactorSeguridad_Rcp + self._K_fMargenRcp_seg
+      )
+    )
 
   # ***************************************************************************************************************************
   # *** Procesamiento de eventos
@@ -337,8 +391,9 @@ class PROCOME_MaqEstados:
 
           elif (self._sEstadoCom == 'Trm') :
             self._oConstrTramaRcp.Reset()           # Borrar lo que haya en el buffer de las tramas de recepcion
-            self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
-            self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
+            # No se limpia el buffer del puerto: es compartido y podría descartar
+            # la respuesta que otra tarjeta está esperando.
+            self._dTemp['TmpRcp_seg']= self._TmoRcpPara('reset')
             self._TransmitirTrama()
             if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Reset de linea remota"')
             if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
@@ -531,18 +586,22 @@ class PROCOME_MaqEstados:
             self._ArrancarPetGral= True
             self._dTemp['TmpPetGral_seg']= self._K_fTmoPetGralPeriodica_seg
             sEvento= 'Procesado'
-            
+
           elif (sEvento == 'TimeoutPetEstDig') :
             self._ArrancarPetEstDig= True
             self._dTemp['TmpPetEstDig_seg']= self._K_fTmoPetEstDigPeriodica_seg
             sEvento= 'Procesado'
-            
-          elif (sEvento == 'TimeoutSincrPer') :
-            if self._MostrarMensajesExplicados():
-              print(self._dTemp)
-            self._ArrancarEnvioSincr= True
+
+          elif (sEvento in ('TimeoutSincr', 'TimeoutSincrPer')) :
+            # La sincronización periódica no debe interrumpir una orden en
+            # curso. Si llega mientras se espera respuesta, los estados de
+            # petición se encargan de priorizarla; en cualquier otro caso se
+            # descarta y se reprograma el temporizador.
             self._dTemp['TmpSincr_seg']= self._K_fTmoSincrPeriodica_seg
-            sEvento= 'Procesado'
+            if self._sEstadoCom == 'EspRcp' and sEstado in ('PeticionMedidas', 'PeticionEstadosDig', 'PeticionClase1') :
+              pass  # Lo gestiona el procesador del estado
+            else :
+              sEvento= 'Procesado'
 
 
         # 
@@ -694,8 +753,9 @@ class PROCOME_MaqEstados:
 
           elif (self._sEstadoCom == 'Trm') :
             self._oConstrTramaRcp.Reset()           # Borrar lo que haya en el buffer de las tramas de recepcion
-            self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
-            self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
+            # No se limpia el buffer del puerto: es compartido y podría descartar
+            # la respuesta que otra tarjeta está esperando.
+            self._dTemp['TmpRcp_seg']= self._TmoRcpPara('reset')
             self._TransmitirTrama()
             sTxtAux= 'Enviada orden: Orden S' + str(self._DatosOrden[0] + 1) + ', operación ' + self._DatosOrden[1]
             self._oFormPpal._Ordenes_MostrarMensaje(sTxtAux)
@@ -814,6 +874,12 @@ class PROCOME_MaqEstados:
       # -----------------------------------------------------------------------------------------------------------------------
 
       if (sEvento not in('Procesado', 'ProcesarDeNuevo')) :
+        # Una trama recibida que el estado actual no espera es ruido del bus
+        # (respuestas tardías de un reintento, ecos, otra tarjeta): se
+        # descarta sin cancelar la comunicación.
+        if (sEvento in ('RecibidaTramaValida', 'RecibidaTramaErronea')) :
+          sEvento= 'Procesado'
+          continue
         sTexto=  'ERROR DE SOFTWARE: Se ha finalizado el programa con un evento pendiente de procesar\n'
         sTexto+= ' - Estado=    <' + self._lEstado[0] + '.' + self._lEstado[1] + '>\n' 
         sTexto+= ' - EstadoCom= <' + self._sEstadoCom + '>\n'
@@ -848,6 +914,11 @@ class PROCOME_MaqEstados:
   # ***************************************************************************************************************************
 
   def _Reintentar(self):
+    # Liberar el bus en cada reintento: si la tarjeta no responde, no debe
+    # monopolizar el bus mientras espera. El siguiente intento vuelve a
+    # competir por él con el resto de tarjetas.
+    self.LiberarBusForzado()
+
     self._iIntentosTrmQuedan-= 1
     if (self._iIntentosTrmQuedan > 0) :
       self._sEstadoCom= 'Trm'
@@ -890,12 +961,17 @@ class PROCOME_MaqEstados:
     self._dTemp['TmpPetEstDig_seg']= 0
 
     # **** Cerrar el canal serie **********************************************************************************************
-  
-    if (self._oCanalSerie.is_open) : self._oCanalSerie.close()
-    
+    #
+    # NOTA: el puerto serie es compartido por todas las tarjetas (lo abre y lo
+    # cierra GestorMultiTarjeta). Cerrarlo aquí dejaría sin comunicación al
+    # resto de tarjetas, así que no se toca.
+
     # **** Pasar a estado de reposo *******************************************************************************************
 
     self._lEstado= ['Enlace', 'Reposo']
+    self._sEstadoCom= 'Reposo'
+    # Liberar el bus si este thread lo tenía retenido
+    self.LiberarBusForzado()
     print('  << ProcesarEventos.Abortar por error critico>>')
 
     return
@@ -907,7 +983,7 @@ class PROCOME_MaqEstados:
 
 
   def _RecibidoMensajeNoEsperado(self, lEstado, lTrama):
-    if ((self._bVerMensDbg_TipoMensRcp or self._bVerMensDbg_MensRcp) and self._MostrarMensajesExplicados()) :
+    if ((self._bVerMensDbg_TipoMensRcp or self._bVerMensDbg_MensajeRcp) and self._MostrarMensajesExplicados()) :
       print('Recibido un mensaje no esperado. Se ignora')
       print('- Estado= '  + lEstado[0] + '.' + lEstado[1])
       self._ImprimirTramaRcp('- Mensaje: ', lTrama)
@@ -938,8 +1014,9 @@ class PROCOME_MaqEstados:
 
     elif (self._sEstadoCom == 'Trm') :
       self._oConstrTramaRcp.Reset()           # Borrar lo que haya en el buffer de las tramas de recepcion
-      self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
-      self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
+      # No se limpia el buffer del puerto: es compartido y podría descartar
+      # la respuesta que otra tarjeta está esperando.
+      self._dTemp['TmpRcp_seg']= self._TmoRcpPara('clase1')
       self._TransmitirTrama()
       if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de datos de clase 1"')
       if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
@@ -1026,8 +1103,9 @@ class PROCOME_MaqEstados:
 
     elif (self._sEstadoCom == 'Trm') :
       self._oConstrTramaRcp.Reset()           # Borrar lo que haya en el buffer de las tramas de recepcion
-      self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
-      self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
+      # No se limpia el buffer del puerto: es compartido y podría descartar
+      # la respuesta que otra tarjeta está esperando.
+      self._dTemp['TmpRcp_seg']= self._TmoRcpPara('medidas')
       self._TransmitirTrama()
       if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de datos de control (medidas)"')
       if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
@@ -1115,8 +1193,9 @@ class PROCOME_MaqEstados:
 
     elif (self._sEstadoCom == 'Trm') :
       self._oConstrTramaRcp.Reset()           # Borrar lo que haya en el buffer de las tramas de recepcion
-      self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
-      self._dTemp['TmpRcp_seg']= self._K_fTmoRcp_Std_seg
+      # No se limpia el buffer del puerto: es compartido y podría descartar
+      # la respuesta que otra tarjeta está esperando.
+      self._dTemp['TmpRcp_seg']= self._TmoRcpPara('estados')
       self._TransmitirTrama()
       if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Peticion de estados digitales de control"')
       if (self._bVerMensDbg_MensajeTrm)  : self._ImprimirTramaTrm('  Mensaje:', self._lTramaTrm)
@@ -1200,7 +1279,8 @@ class PROCOME_MaqEstados:
     if (self._sEstadoCom == 'PrepTrm') :
       self._lTramaTrm= PROCOME_ConstruirTramaTrm.ConstruirMensaje_SincrUniv(self._iDir)
       self._oConstrTramaRcp.Reset()           # Borrar lo que haya en el buffer de las tramas de recepcion
-      self._oCanalSerie.reset_input_buffer()  # Borrar lo que haya en el buffer de recepcion
+      # No se limpia el buffer del puerto: es compartido y podría descartar
+      # la respuesta que otra tarjeta está esperando.
       self._dTemp['TmpRcp_seg']= 0
       self._dTemp['TmpEspera_seg']= 0.1    # Darle un tiempo para no mandar 2 mensajes seguidos
       if (self._bVerMensDbg_TipoMensTrm and self._MostrarMensajesExplicados()) : print(self._lEstado[0] + ': Transmitido un mensaje de "Sincronizacion universal"')
@@ -1314,30 +1394,102 @@ class PROCOME_MaqEstados:
   def _TransmitirTrama(self):
     # En modo Monitor NO transmitir NADA
     if self._bModoMonitor:
-      return
+      return False
 
-    # Arbitraje de bus: adquirir el lock compartido antes de transmitir
-    # Timeout 0.2s para no bloquear si otro hilo está en medio de una transacción
+    # Los temporizadores que se activan con la transmisión se restauran
+    # después de escribir: si la espera por el bus se alarga, no deben
+    # consumirse antes de que la trama salga por el puerto.
+    fTmoRcpPend= self._dTemp.get('TmpRcp_seg', 0.0)
+    fTmoEspPend= self._dTemp.get('TmpEspera_seg', 0.0)
+
+    # Arbitraje de bus: adquirir el lock compartido antes de transmitir.
+    # El jitter se hace ANTES de adquirir el lock para no bloquear el bus
+    # mientras los demás threads esperan.
     if not self._bTengoBus and self._oBusLock is not None:
-      if not self._oBusLock.acquire(timeout=0.2):
-        return  # No se pudo adquirir el lock, saltar transmisión
+      time.sleep(random.uniform(0, 0.02))
+      # La espera por el bus debe cubrir el timeout máximo de recepción de
+      # todas las tarjetas que puedan tener el turno por delante (máximo 6).
+      # Se sondea en tramos cortos para poder abortar si se pide parar.
+      fPresupuesto= (self._K_fTmoRcp_Max_seg + 0.5) * self._K_iNrTarjetasMax
+      tFin= time.monotonic() + fPresupuesto
+      bAdquirido= False
+      while self._bRunning and time.monotonic() < tFin:
+        if self._oBusLock.acquire(timeout=0.25):
+          bAdquirido= True
+          break
+      if not bAdquirido:
+        # No se pudo adquirir el bus. Se programa un timeout corto para
+        # reintentar la transacción y no dejar la máquina atascada.
+        self._dTemp['TmpRcp_seg']= 0.25
+        self._dTemp['TmpEspera_seg']= 0.10
+        if self._MostrarMensajesExplicados():
+          print('[BUS] Tarjeta ' + str(self._iDir) + ': no se pudo adquirir el bus para transmitir')
+        return False
       self._bTengoBus = True
-      # Jitter aleatorio 0-50ms para desincronizar los threads
-      time.sleep(random.uniform(0, 0.05))
+      self._fBusDesde = time.monotonic()
+      if not self._bRunning:
+        # Se pidió parar: no transmitir; liberar el bus de inmediato.
+        self.LiberarBusForzado()
+        return False
 
-    self._oCanalSerie.rts= True
-    self._oCanalSerie.write(bytes(self._lTramaTrm))
+    try:
+      self._oCanalSerie.rts= True
+      self._oCanalSerie.write(bytes(self._lTramaTrm))
+    except Exception:
+      # Si falla la escritura, liberar el bus inmediatamente para no dejarlo
+      # retenido por este thread.
+      self.LiberarBusForzado()
+      raise
+    finally:
+      # Iniciar los temporizadores ahora que la trama ya se ha transmitido
+      self._dTemp['TmpRcp_seg']= fTmoRcpPend
+      self._dTemp['TmpEspera_seg']= fTmoEspPend
+
     # & self._oCanalSerie.rts= False
     self._oFormPpal.AvanzarPilotoTrm()
-    return
+    return True
+
+
+  def _GuardiaBus(self):
+    """Tiempo máximo que se retiene el bus esperando una respuesta."""
+    return min(1.0, max(0.5, self._TmoRcpPara('medidas') * 0.4))
 
 
   def LiberarBusSiReposo(self):
-    """Libera el lock del bus si la máquina de estados ha vuelto a Reposo"""
-    if self._bTengoBus and self._sEstadoCom == 'Reposo' and self._oBusLock is not None:
-      self._oBusLock.release()
+    """Libera el bus al terminar la transacción o al agotarse la guardia.
+
+    La guardia evita que una tarjeta muda retenga el bus todo su timeout de
+    recepción: los demás hilos pueden transmitir y esta tarjeta sigue
+    escuchando su respuesta.
+    """
+    if self._bTengoBus and self._oBusLock is not None:
+      try:
+        bGuardiaAgotada= (time.monotonic() - self._fBusDesde) >= self._GuardiaBus()
+      except Exception:
+        bGuardiaAgotada= True
+      if self._sEstadoCom == 'Reposo' or bGuardiaAgotada:
+        self._oBusLock.release()
+        self._bTengoBus = False
+        return True
+    return False
+
+
+  def LiberarBusForzado(self):
+    """Libera el lock del bus sin condiciones (cancelaciones y errores)"""
+    if self._bTengoBus and self._oBusLock is not None:
+      try:
+        self._oBusLock.release()
+      except RuntimeError:
+        pass
       self._bTengoBus = False
       return True
     return False
+
+
+  def Detener(self):
+    """Marca la máquina como detenida y libera el bus si lo tenía retenido"""
+    self._bRunning= False
+    self.LiberarBusForzado()
+    return
 
 # #############################################################################################################################

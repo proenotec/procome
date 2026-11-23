@@ -49,7 +49,7 @@ def TramaCorta_Construir(BitPRM, BitFCB_ACD, Bit_FCV_DFC, Funcion, Direccion):
   else :
     byCampoControl= 0x00
     if (BitFCB_ACD) : byCampoControl|= 0x20 
-    if (BitFCV_DFC) : byCampoControl|= 0x10 
+    if (Bit_FCV_DFC) : byCampoControl|= 0x10 
     byCampoControl|= Funcion
         
   # **** Comun para ambos casos ***********************************************************************************************
@@ -96,7 +96,7 @@ def TramaLarga_Construir(BitPRM, BitFCB_ACD, Bit_FCV_DFC, Funcion, Direccion, AS
   else :
     byCampoControl= 0x00
     if (BitFCB_ACD) : byCampoControl|= 0x20 
-    if (BitFCV_DFC) : byCampoControl|= 0x10 
+    if (Bit_FCV_DFC) : byCampoControl|= 0x10 
     byCampoControl|= Funcion
 
   # **** Comun para ambos casos ***********************************************************************************************

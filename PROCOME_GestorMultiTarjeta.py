@@ -27,6 +27,30 @@ import PROCOME_Telegram
 # #### Clase SerialPortWrapper - Envuelve el puerto serie con protección por Lock
 # #############################################################################################################################
 
+class BusLock:
+  """Turno FIFO para el bus serie.
+
+  threading.Lock no garantiza el orden de espera: un hilo que reintenta
+  puede adelantar a los demás y dejarlos sin turno (con una tarjeta muda,
+  el resto acaba descartando transmisiones). Esta cola da el turno por
+  orden de llegada.
+  """
+
+  def __init__(self):
+    self._q = queue.Queue()
+    self._q.put(True)
+
+  def acquire(self, timeout=None):
+    try:
+      self._q.get(timeout=timeout)
+      return True
+    except queue.Empty:
+      return False
+
+  def release(self):
+    self._q.put(True)
+
+
 class SerialPortWrapper:
   """Wrapper del puerto serie que protege las transmisiones con Lock y previene cierre accidental"""
 
@@ -119,11 +143,13 @@ class ThreadTarjeta(threading.Thread):
       oTelegram,
       fnCallbackBeepTransmision=self._fnCallbackBeepTransmision,
       fnCallbackBeepRecepcion=self._fnCallbackBeepRecepcion,
-      oBusLock=self._oBusLock
+      oBusLock=self._oBusLock,
+      iNrMedidas=self._iNrMedidas,
+      iNrEstados=self._iNrEstados
     )
 
     # Control de tiempo
-    self._fIncrT_TmpAnt = time.time()
+    self._fIncrT_TmpAnt = time.monotonic()
 
     # Cola de eventos para la máquina de estados
     self._qEventos = []
@@ -133,7 +159,7 @@ class ThreadTarjeta(threading.Thread):
   def run(self):
     """Bucle principal del thread"""
     self._bRunning = True
-    self._fIncrT_TmpAnt = time.time()
+    self._fIncrT_TmpAnt = time.monotonic()
 
     while self._bRunning:
       try:
@@ -146,14 +172,23 @@ class ThreadTarjeta(threading.Thread):
         # Actualizar temporizadores
         self._ActualizarTemporizadores()
 
+        # Garantiza que el bus se libera aunque la respuesta haya llegado por
+        # el camino de recepción (que antes no pasaba por LiberarBusSiReposo)
+        self._oMaqEstados.LiberarBusSiReposo()
+
         # Pausa para reducir carga del CPU y contención del lock
         # En multi-tarjeta, múltiples threads compiten por el puerto serie
-        time.sleep(0.02)  # 20ms por iteración
+        time.sleep(0.01)  # 10ms por iteración
 
       except Exception as e:
         # Mostrar error pero continuar ejecutando (solo en modo explicado)
         if self._oGestor._sModoMensajes != 'hex':
           print(f'[Tarjeta {self._iNrTarjeta}] ERROR en thread: {str(e)}')
+        # Si el error deja el bus retenido, liberarlo para no bloquear al resto
+        try:
+          self._oMaqEstados.LiberarBusForzado()
+        except Exception:
+          pass
         # Pequeña pausa para evitar loop infinito en caso de error persistente
         time.sleep(0.1)
 
@@ -185,21 +220,16 @@ class ThreadTarjeta(threading.Thread):
               print(f'[Tarjeta {self._iNrTarjeta}] Orden ignorada: tarjeta sin comunicación')
             continue
 
-          # Intentar adquirir el lock con timeout para evitar bloqueos indefinidos
-          bLockAdquirido = self._oSerialLock.acquire(timeout=2.0)
-          if not bLockAdquirido:
-            if self._oGestor._sModoMensajes != 'hex':
-              print(f'[Tarjeta {self._iNrTarjeta}] TIMEOUT esperando lock serial para {sEvento}')
-            continue
-
+          # NO se toma _oSerialLock aquí: _TransmitirTrama ya escribe con el
+          # lock serial y toma el bus. Retener el lock serial mientras se
+          # espera el bus provocaría una inversión de orden con el lector y
+          # deadlock potencial entre threads.
           try:
             Rta = self._oMaqEstados.ProcesarEventos(sEvento, xDato)
             self._ProcesarRespuestaMaqEstados(Rta)
           finally:
-            self._oSerialLock.release()
-
-          # Liberar el lock del bus si la transacción ha terminado
-          self._oMaqEstados.LiberarBusSiReposo()
+            # Liberar el lock del bus si la transacción ha terminado
+            self._oMaqEstados.LiberarBusSiReposo()
         else:
           # Para eventos de timeout, verificar también si el puerto está abierto
           if sEvento.startswith('Timeout') and not self._oCSerie.is_open:
@@ -241,89 +271,13 @@ class ThreadTarjeta(threading.Thread):
 
 
   def _ProcesarRecepcionSerie(self):
-    """Procesa datos recibidos del puerto serie (con distribución centralizada)"""
+    """Procesa las tramas que el lector dedicado ha puesto en su cola."""
     if not self._oCSerie.is_open:
       return
 
-    # Solo el primer thread lee del puerto y distribuye tramas
-    bSoyLector = False
-    with self._oGestor._lockTurno:
-      if len(self._oGestor._lThreads) > 0 and self._oGestor._lThreads[0]._iNrTarjeta == self._iNrTarjeta:
-        bSoyLector = True
-
-    if bSoyLector:
-      # Leer del puerto y distribuir tramas a todos los threads
-      self._LeerYDistribuirTramas()
-
-    # Todos los threads procesan tramas de su cola
+    # La lectura del puerto la hace GestorMultiTarjeta._ThreadLector: así
+    # ningún hilo de tarjeta bloquea la recepción mientras espera el bus.
     self._ProcesarTramasDeCola()
-
-
-  def _LeerYDistribuirTramas(self):
-    """Lee del puerto serie y distribuye tramas completas a todos los threads"""
-    try:
-      # Verificar que el puerto esté abierto antes de intentar leer
-      if not self._oCSerie.is_open:
-        return
-
-      with self._oSerialLock:
-        # Verificar de nuevo dentro del lock (por si se cerró mientras esperábamos)
-        if not self._oCSerie.is_open:
-          return
-
-        iBytesDisponibles = self._oCSerie.in_waiting
-        if iBytesDisponibles == 0:
-          return
-
-        # Leer TODOS los bytes disponibles
-        lBytesRcpCSerie = []
-        try:
-          for _ in range(min(iBytesDisponibles, 100)):  # Máximo 100 bytes por iteración
-            lBytesRcpCSerie.append(ord(self._oCSerie.read(1)))
-        except:
-          if len(lBytesRcpCSerie) == 0:
-            return
-
-      # Procesar los bytes fuera del lock y construir tramas
-      iContadorErrores = 0  # Contador para agrupar errores
-      for iRcpCSerie in lBytesRcpCSerie:
-        xRta = self._oConstrTramaRcp.ConstruirTrama(iRcpCSerie)
-
-        if type(xRta) == int:
-          if xRta < 0:
-            iContadorErrores += 1
-            self._oConstrTramaRcp.Reset()
-        else:
-          # Si había errores acumulados, mostrar resumen (solo en modo explicado)
-          if iContadorErrores > 0 and self._oGestor._sModoMensajes != 'hex':
-            print(f'[LECTOR] {iContadorErrores} errores de recepción')
-            iContadorErrores = 0
-
-          # Trama recibida completa - distribuir a TODOS los threads
-          lTramaRcp = xRta.copy()
-          self._oConstrTramaRcp.Reset()
-
-          # NUEVO: Si modo Monitor, solo registrar en detector (NO distribuir a threads)
-          if self._oGestor._bModoMonitor and self._oGestor._oDetectorDispositivos:
-            self._oGestor._oDetectorDispositivos.RegistrarTrama(lTramaRcp)
-            # En modo Monitor, NO distribuir tramas a las máquinas de estados
-            # porque no están en un flujo normal de protocolo y generarían errores
-            continue
-
-          # Distribuir la trama a todos los threads (cada uno filtrará por dirección)
-          for oThread in self._oGestor._lThreads:
-            oThread._qTramas.put(lTramaRcp)
-
-      # Mostrar resumen final si había errores (solo en modo explicado)
-      if iContadorErrores > 0 and self._oGestor._sModoMensajes != 'hex':
-        print(f'[LECTOR] {iContadorErrores} errores de recepción acumulados')
-
-    except Exception as e:
-      # Solo mostrar error si no es por descriptor cerrado (esperado al parar)
-      # y si no estamos en modo HEX
-      if ('Descriptor' not in str(e) and 'descriptor' not in str(e) and
-          self._oGestor._sModoMensajes != 'hex'):
-        print(f'[LECTOR] ERROR en _LeerYDistribuirTramas: {str(e)}')
 
 
   def _ProcesarTramasDeCola(self):
@@ -391,10 +345,15 @@ class ThreadTarjeta(threading.Thread):
     if not self._bRunning:
       return
 
-    fTmpAct = time.time()
+    # time.monotonic() es inmune a los saltos del reloj del sistema.
+    fTmpAct = time.monotonic()
     fIncrTmp = fTmpAct - self._fIncrT_TmpAnt
     if fIncrTmp < 0:
       fIncrTmp = 0
+    # Limitar saltos grandes (por ejemplo, si el thread estuvo bloqueado
+    # esperando un lock): así no se disparan todos los timeouts a la vez.
+    if fIncrTmp > 0.5:
+      fIncrTmp = 0.5
     self._fIncrT_TmpAnt = fTmpAct
 
     # Obtener estado actual para filtrar timeouts apropiadamente
@@ -405,12 +364,15 @@ class ThreadTarjeta(threading.Thread):
     bEnBucle = (sSuperEstado == 'Bucle')
     bEnInicializacion = (sSuperEstado == 'Inicializacion')
     bEnEnlace = (sSuperEstado == 'Enlace')
+    # La máquina de estados decide si la sincronización puede interrumpir la
+    # petición en curso o si se descarta y se reprograma.
 
     if fIncrTmp > 0.0:
       # Temporizado TmpRcp - válido en Enlace, Inicializacion y Bucle
       if self._dTemp['TmpRcp_seg'] > 0.0:
         self._dTemp['TmpRcp_seg'] -= fIncrTmp
         if self._dTemp['TmpRcp_seg'] <= 0.0:
+          self._dTemp['TmpRcp_seg'] = 0.0
           if bEnEnlace or bEnInicializacion or bEnBucle:
             self.EnviarEvento('TimeoutRcp')
 
@@ -418,19 +380,22 @@ class ThreadTarjeta(threading.Thread):
       if self._dTemp['TmpEspera_seg'] > 0.0:
         self._dTemp['TmpEspera_seg'] -= fIncrTmp
         if self._dTemp['TmpEspera_seg'] <= 0.0:
+          self._dTemp['TmpEspera_seg'] = 0.0
           self.EnviarEvento('TimeoutEspera')
 
-      # Temporizado TmpSincr - solo en Inicializacion
+      # Temporizado TmpSincr - en Inicializacion y en Bucle.TiempoLibre
       if self._dTemp['TmpSincr_seg'] > 0.0:
         self._dTemp['TmpSincr_seg'] -= fIncrTmp
         if self._dTemp['TmpSincr_seg'] <= 0.0:
-          if bEnInicializacion:
+          self._dTemp['TmpSincr_seg'] = 0.0
+          if bEnInicializacion or bEnBucle:
             self.EnviarEvento('TimeoutSincr')
 
       # Temporizado TmpPetGral - solo en Bucle
       if self._dTemp['TmpPetGral_seg'] > 0.0:
         self._dTemp['TmpPetGral_seg'] -= fIncrTmp
         if self._dTemp['TmpPetGral_seg'] <= 0.0:
+          self._dTemp['TmpPetGral_seg'] = 0.0
           if bEnBucle:
             self.EnviarEvento('TimeoutPetGral')
 
@@ -438,6 +403,7 @@ class ThreadTarjeta(threading.Thread):
       if self._dTemp['TmpPetEstDig_seg'] > 0.0:
         self._dTemp['TmpPetEstDig_seg'] -= fIncrTmp
         if self._dTemp['TmpPetEstDig_seg'] <= 0.0:
+          self._dTemp['TmpPetEstDig_seg'] = 0.0
           if bEnBucle:
             self.EnviarEvento('TimeoutPetEstDig')
 
@@ -466,6 +432,12 @@ class ThreadTarjeta(threading.Thread):
   def EnviarEvento(self, sEvento, xDato=None):
     """Añade un evento a la cola para ser procesado por el thread"""
     with self._lockEventos:
+      # Los timeouts no deben duplicarse: un temporizador puede expirar más
+      # de una vez antes de que el thread procese el primer evento.
+      if sEvento.startswith('Timeout'):
+        for sEventoExistente, _xDatoExistente in self._qEventos:
+          if sEventoExistente == sEvento:
+            return
       self._qEventos.append((sEvento, xDato))
 
 
@@ -488,6 +460,8 @@ class ThreadTarjeta(threading.Thread):
 
     # Detener el bucle del thread
     self._bRunning = False
+    # Que la máquina de estados suelte el bus de inmediato
+    self._oMaqEstados.Detener()
 
 
   def Comunicando(self):
@@ -544,15 +518,14 @@ class GestorMultiTarjeta:
     # Lock para sincronizar acceso al puerto serie compartido
     self._oSerialLock = threading.RLock()  # RLock para permitir reentrada desde el mismo thread
 
-    # Lock para arbitraje de bus serial entre threads (evita colisiones en RS-485)
-    self._oBusLock = threading.Lock()
+    # Turno FIFO para arbitraje de bus serial entre threads (evita colisiones en RS-485)
+    self._oBusLock = BusLock()
 
     # Threads de las tarjetas (máximo 6)
     self._lThreads = []
 
     # Sistema de turnos para lectura del puerto serie
     self._iTurnoActual = 0
-    self._lockTurno = threading.Lock()
 
     # Callbacks del GUI
     self._fnCallbackEstado = None
@@ -576,6 +549,8 @@ class GestorMultiTarjeta:
     self._threadVigilante = None
     self._threadLectorMonitor = None
     self._bLectorMonitorRunning = False
+    self._threadLector = None
+    self._bLectorRunning = False
 
 
   def SetCallbacks(self, fnEstado=None, fnMedidas=None, fnEstados=None, fnDatosEquipo=None, fnOrden=None, fnBeepTransmision=None, fnBeepRecepcion=None):
@@ -717,6 +692,16 @@ class GestorMultiTarjeta:
     if bNecesitaReinicializar:
       self.InicializarTarjetas()
 
+    # Lector dedicado del puerto serie (independiente del turno del bus)
+    if self._threadLector is None or not self._threadLector.is_alive():
+      self._bLectorRunning = True
+      self._threadLector = threading.Thread(
+        target=self._ThreadLector,
+        name='LectorSerie',
+        daemon=True
+      )
+      self._threadLector.start()
+
     # Iniciar todos los threads
     for oThread in self._lThreads:
       if not oThread.is_alive():
@@ -740,21 +725,23 @@ class GestorMultiTarjeta:
     # Detener thread lector de monitor si existe
     self._bLectorMonitorRunning = False
 
+    # Detener el lector dedicado del modo normal
+    self._bLectorRunning = False
+    if self._threadLector is not None and self._threadLector.is_alive():
+      self._threadLector.join(timeout=1.0)
+
     # Detener todos los threads de tarjetas
     for oThread in self._lThreads:
       oThread.Detener()
 
-    # Esperar a que los threads terminen correctamente (con timeout)
-    tInicio = time.time()
-    while time.time() - tInicio < 2.0:  # Timeout de 2 segundos
-      bTodosParados = True
-      for oThread in self._lThreads:
-        if oThread._bRunning:
-          bTodosParados = False
-          break
-      if bTodosParados:
-        break
-      time.sleep(0.05)
+    # Esperar a que los threads terminen realmente (con timeout)
+    for oThread in self._lThreads:
+      if oThread.is_alive():
+        oThread.join(timeout=3.0)
+
+    # Los threads ya pararon: liberar el bus si alguno lo retenía aún
+    for oThread in self._lThreads:
+      oThread._oMaqEstados.LiberarBusForzado()
 
     # Cerrar puerto serie después de que los threads hayan parado
     with self._oSerialLock:
@@ -776,6 +763,57 @@ class GestorMultiTarjeta:
         time.sleep(1.0)
       except:
         break
+
+
+  def _ThreadLector(self):
+    """Lee el puerto serie una sola vez y reparte las tramas a cada tarjeta.
+
+    Antes leía el hilo de la primera tarjeta; si éste esperaba el turno del
+    bus, nadie leía y las respuestas llegaban tarde a todas.
+    """
+    oConstr = PROCOME_ConstruirTramaRcp.PROCOME_ConstruirTramaRcp(0)
+
+    while self._bLectorRunning:
+      try:
+        if not self._oCSerie.is_open:
+          time.sleep(0.05)
+          continue
+
+        with self._oSerialLock:
+          if not self._oCSerie.is_open:
+            continue
+          iBytesDisponibles = self._oCSerie.in_waiting
+          lBytes = []
+          if iBytesDisponibles > 0:
+            lBytes = list(self._oCSerie.read(min(iBytesDisponibles, 4096)))
+
+        if not lBytes:
+          time.sleep(0.005)
+          continue
+
+        for byDato in lBytes:
+          xRta = oConstr.ConstruirTrama(byDato)
+          if type(xRta) == int:
+            if xRta < 0:
+              oConstr.Reset()
+            continue
+
+          lTramaRcp = xRta.copy()
+          oConstr.Reset()
+
+          if self._bModoMonitor and self._oDetectorDispositivos:
+            self._oDetectorDispositivos.RegistrarTrama(lTramaRcp)
+            continue
+
+          for oThread in self._lThreads:
+            oThread._qTramas.put(lTramaRcp)
+
+      except Exception as e:
+        if 'not open' not in str(e) and self._sModoMensajes != 'hex':
+          print(f'[LECTOR] ERROR: {str(e)}')
+        time.sleep(0.05)
+
+    print('[LECTOR] Thread lector finalizado')
 
 
   def _ThreadLectorMonitor(self):
@@ -807,11 +845,10 @@ class GestorMultiTarjeta:
           if iBytesDisponibles == 0:
             continue
 
-          # Leer bytes disponibles (máximo 100 por iteración)
+          # Leer todos los bytes disponibles de una vez (máximo 4096)
           lBytesRcpCSerie = []
           try:
-            for _ in range(min(iBytesDisponibles, 100)):
-              lBytesRcpCSerie.append(ord(self._oCSerie.read(1)))
+            lBytesRcpCSerie = list(self._oCSerie.read(min(iBytesDisponibles, 4096)))
           except Exception as e:
             if self._sModoMensajes != 'hex':
               print(f'[LECTOR MONITOR] Error al leer puerto serie: {str(e)}')
@@ -857,7 +894,7 @@ class GestorMultiTarjeta:
             print(f'[LECTOR MONITOR] Constructor devolvió valor inesperado: {xRta} (tipo: {type(xRta)})')
 
         # Pausa para reducir carga del CPU
-        time.sleep(0.02)  # 20ms
+        time.sleep(0.01)  # 10ms
 
       except Exception as e:
         import traceback

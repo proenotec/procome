@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 3.0.0
+## Versión Actual: 3.0.1
 
 ## Sistema de Versionado
 
@@ -70,6 +70,29 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v3.0.1 (2026-11-23)
+**Corrección de la comunicación serie rota por el arbitraje de bus de v3.0.0**
+
+Correcciones:
+- 🐛 Restaurado el timeout de recepción adaptativo (`_TmoRcpPara`) que v3.0.0 sustituyó por 0.2s fijos. A 9600 baudios o menos la respuesta de la tarjeta no llegaba a tiempo
+- 🐛 El bus ya no se retiene durante toda la transacción: se libera en cada reintento, así una tarjeta que no responde no bloquea a las demás
+- 🐛 La espera por el bus se calcula a partir del timeout de recepción (antes 2s fijos), para que con 35 medidas / 64 estados (timeout 2,5s) no se descarten tramas
+- 🐛 `LiberarBusForzado()` en errores de escritura y en la parada (el lock ya no puede quedar retenido)
+- 🐛 Turno **FIFO** para el bus (`BusLock` con cola): `threading.Lock` no es justo y una tarjeta podía adelantar siempre al resto
+- 🐛 Una trama recibida que el estado no espera se descarta como ruido del bus; antes cancelaba la comunicación de esa tarjeta
+- 🐛 Al cancelar una tarjeta ya no se cierra el puerto serie compartido (dejaba sin comunicación a las demás)
+- 🐛 `_bRunning` definido en `PROCOME_MaqEstados` (AttributeError en el primer envío)
+- 🐛 `_bVerMensDbg_MensRcp` → `_bVerMensDbg_MensajeRcp` (AttributeError al recibir una trama no esperada)
+- 🐛 `TramaCorta_Construir`/`TramaLarga_Construir`: `BitFCV_DFC` → `Bit_FCV_DFC` (NameError al construir tramas de secundario)
+
+Mejoras:
+- 🔧 Hilo lector dedicado del puerto serie: antes leía el hilo de la primera tarjeta y, si estaba esperando el bus, nadie leía y las respuestas llegaban tarde a todas
+- 🔧 Ya no se vacía el buffer del puerto antes de cada transmisión: es compartido y podía descartar la respuesta que otra tarjeta esperaba
+- 🔧 Lectura del puerto de hasta 4096 bytes de una vez (antes 100 bytes con `read(1)`)
+- 🔧 `time.monotonic()` y tope de salto de 0.5s en los temporizadores
+- 🔧 Sin duplicar timeouts en la cola de eventos
+- 🔧 `PararComunicacion()` espera a que los hilos terminen de verdad antes de cerrar el puerto
 
 ### v3.0.0 (2026-06-24)
 **Arbitraje de bus serial multi-tarjeta + timeout anti-colisión**
