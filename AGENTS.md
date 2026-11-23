@@ -1,69 +1,144 @@
 # AGENTS.md — PROCOME
 
-## Bugs (fix these first)
+Guía para trabajar en este repositorio. Versión actual: **3.1.1**.
 
-- `FichConfig.py:459`: `bHayError = True` is undefined and will crash. Should be `iHayError = 2`.
-- `PROCOME_MaqEstados.py:189`: `self._sEstado` does not exist. Should be `self._lEstado`.
+## Estado
+
+No hay bugs conocidos abiertos. Los que había en `FichConfig.py` y `PROCOME_MaqEstados.py`
+se corrigieron en v2.7.7 y los de la comunicación serie en la v3.0.1
+(ver `VERSION.md` para el historial completo).
 
 ## Run / Build
 
 ```bash
-# Qt version (newer, requires .venv)
-./run.sh                          # auto-creates .venv, installs deps, runs Qt version
+./run.sh                    # crea/usa .venv, instala dependencias y arranca la app Qt
+./build.sh                  # ejecutable standalone con PyInstaller -> dist/PROCOME
+python3 PROCOME_Arranque_Qt.py   # arranque directo (requiere PySide6 y pyserial)
 
-# Tkinter version (legacy, no extra deps)
-python3 PROCOME_Arranque.py
-
-# Standalone executable via PyInstaller
-./build.sh                        # outputs dist/PROCOME
-
-# Setup only
+# Preparar el entorno a mano
 python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 ```
 
-No tests, no linter, no typechecker exist. Test manually with real serial hardware or virtual serial ports.
+No hay tests automatizados ni linter. Se prueba con hardware real o con un puerto
+serie virtual (ver **Pruebas**).
+
+### XWayland
+
+La aplicación fuerza `QT_QPA_PLATFORM=xcb` al arrancar (`PROCOME_Arranque_Qt.py` y
+`run.sh`). Es necesario: en Wayland nativo el compositor ignora `move()` y
+`setGeometry()` y no se pueden colocar las dos ventanas (consola 40 % + principal 60 %).
+Para volver a Wayland nativo: `QT_QPA_PLATFORM=wayland ./run.sh` (las ventanas ya no
+se colocarán solas).
 
 ## Architecture
 
-- **Flat monorepo**, no Python package structure. All modules are standalone `.py` files importing each other by name.
-- **Multi-threaded**: Each enabled tarjeta (1–6) runs its own `ThreadTarjeta` daemon thread. All threads share one serial port, protected by `threading.RLock()` (`_oSerialLock`). Only thread 0 reads the port and distributes frames to all threads via `queue.Queue`.
-- **Bus arbitration via `_oBusLock`**: A `threading.Lock()` in `GestorMultiTarjeta` serializes all transmissions across threads. Each thread acquires `_oBusLock` inside `_TransmitirTrama()` just before writing, with a 0–50ms random jitter to desync periodic polls. The lock is released only when the thread's state machine returns to `_sEstadoCom == 'Reposo'` (transaction complete), checked via `LiberarBusSiReposo()` after every `ProcesarEventos` call.
-- **GUI thread-safety**: `SignalEmitter` class bridges thread → GUI via Qt signals (`actualizarMedidas`, `actualizarEstados`, etc.). Never call `setText()` from a thread directly.
-- **State machine** (`PROCOME_MaqEstados.py`): Hierarchical — 4 super-states (Enlace, Inicializacion, Bucle, Control) × sub-states. Event loop iterates via `while(sEvento != 'Procesado')` returning `'ProcesarDeNuevo'` to re-enter.
-- **Modo Monitor**: Passive RS-485 listener. Uses a separate `_ThreadLectorMonitor` + `_ThreadVigilanteTimeouts`. Detects devices via `DetectorDispositivos.py`, filtered to PRM=0 (secondary/slave responses) only.
+- **Flat monorepo**, sin paquetes. Los módulos se importan por nombre.
+- **Multi-hilo**: cada tarjeta habilitada (1–6) tiene su `ThreadTarjeta` daemon. Todas
+  comparten un único puerto serie protegido por `_oSerialLock` (`threading.RLock`).
+- **Lector dedicado** (`GestorMultiTarjeta._ThreadLector`): un solo hilo lee el puerto,
+  parsea las tramas y las reparte a la cola de cada tarjeta (`_qTramas`). Antes leía el
+  hilo de la primera tarjeta y, si estaba esperando el bus, nadie leía y las respuestas
+  llegaban tarde a todas.
+- **Arbitraje de bus** (`BusLock`): turno **FIFO** (cola) entre los hilos para transmitir
+  por RS-485. Cada `_TransmitirTrama()` adquiere el turno con un jitter de 0–20 ms para
+  desincronizar los sondeos. Se libera al terminar la transacción (`LiberarBusSiReposo`)
+  o al agotarse la guardia (`_GuardiaBus`, 0,5–1 s), para que una tarjeta muda no
+  bloquee al resto; también en cada reintento y en errores/parada (`LiberarBusForzado`).
+- **Timeout de recepción adaptativo** (`_TmoRcpPara`): 0,30–2,50 s según baudios y tamaño
+  estimado de trama (nº de medidas/estados). No usar un valor fijo pequeño.
+- **No se vacía el buffer del puerto antes de transmitir**: es compartido y se llevaría
+  por delante la respuesta que otra tarjeta está esperando.
+- **Tramas no esperadas**: si llega una trama que el estado actual no maneja, se descarta
+  como ruido del bus; no debe cancelar la comunicación.
+- **Puerto serie**: lo abre y lo cierra `GestorMultiTarjeta` (`ArrancarComunicacion` /
+  `PararComunicacion`). Una tarjeta no debe cerrarlo al cancelar.
+- **GUI thread-safety**: `SignalEmitter` conecta hilo → GUI con señales Qt
+  (`actualizarMedidas`, `actualizarEstados`, …). Nunca llamar a `setText()` desde un hilo.
+- **Máquina de estados** (`PROCOME_MaqEstados.py`): jerárquica, 4 super-estados
+  (Enlace, Inicializacion, Bucle, Control) × sub-estados. El bucle interno itera
+  mientras `sEvento != 'Procesado'`, devolviendo `'ProcesarDeNuevo'` para reentrar.
+- **Modo Monitor**: escucha pasiva RS-485 con `_ThreadLectorMonitor` +
+  `_ThreadVigilanteTimeouts` y `DetectorDispositivos` (sólo respuestas, PRM=0).
+
+## Ventanas
+
+- La consola es una ventana aparte (`QDialog` con flags de ventana). Al abrirla,
+  `_ReorganizarVentanas()` reparte el área útil de la pantalla: **consola 40 % a la
+  izquierda, principal 60 % a la derecha**, en coordenadas del **marco** de cada ventana
+  (se descuentan bordes y barra de título) y con comprobación final de solape.
+- `_ColocarVentana()` es el único punto que mueve/redimensiona: hace `showNormal()`,
+  marca `WA_Moved`, suelta la restricción del layout (`SetNoConstraint`), limpia
+  mínimos/máximos y aplica `move()` + `resize()` + `setGeometry()`.
+- Al cerrar la consola, `_RestaurarVentanaPrincipal()` devuelve la principal a todo el
+  área útil.
+- La ventana principal **no** debe crearse con `setFixedSize()`: el gestor de ventanas
+  deshabilita maximizar/restaurar.
 
 ## Entrypoints
 
-| File | Role |
+| Fichero | Papel |
 |---|---|
-| `PROCOME_Arranque_Qt.py` | Qt app entrypoint (loads config, creates serial port, launches `FormPpal`) |
-| `PROCOME_FormPpal_Qt.py` | Main GUI: tabbed interface (one per tarjeta), console window, all dialogs |
-| `PROCOME_GestorMultiTarjeta.py` | Orchestrates threads, distributes frames, owns `_oSerialLock` and `_oBusLock` |
-| `PROCOME_MaqEstados.py` | PROCOME protocol state machine per tarjeta |
-| `FichConfig.py` | XML config read/write with type validation via setter methods |
+| `PROCOME_Arranque_Qt.py` | Entrada Qt: config, puerto serie, `FormPpal`; fuerza xcb |
+| `PROCOME_FormPpal_Qt.py` | GUI: pestañas por tarjeta, consola, diálogos, ventanas |
+| `PROCOME_GestorMultiTarjeta.py` | Hilos de tarjeta, lector dedicado, bus FIFO, puerto |
+| `PROCOME_MaqEstados.py` | Máquina de estados PROCOME por tarjeta |
+| `FichConfig.py` | Configuración XML con validación por setters |
 
 ## Key Conventions
 
-- All files: `# -*- coding: utf-8 -*-` — but **watch for double-encoded Spanish characters** (`Ã` bytes) in string literals. Use plain ASCII for labels if possible.
-- Spanish mixed with English identifiers: `_bHayTransmision`, `_lTramaRcp`, `_iIntentosTrmQuedan`.
-- Debug verbosity: `iDEBUG_MaqEstados` bitmask at `PROCOME_FormPpal_Qt.py:111` (default `0x03F` — all on). Flags: `0x01` events, `0x02` states, `0x04` tx types, `0x08` tx msgs, `0x10` rx types, `0x20` rx msgs, `0x80` extra.
-- Message display mode (`_sModoMensajes`): `'explicado'` (detailed) or `'hex'` (only `<<<<` / `>>>>` hex lines). Mode propagates to all threads via `GestorMultiTarjeta.SetModoMensajes()`.
-- Config lives in `PROCOME.cfg` (XML). To change at runtime: stop comms → change → save → restart comms.
+- Todos los ficheros: `# -*- coding: utf-8 -*-`. Cuidado con caracteres acentuados
+  doblemente codificados (`Ã`); mejor ASCII en etiquetas.
+- Español mezclado con identificadores en inglés: `_bHayTransmision`, `_lTramaRcp`.
+- Depuración: máscara `iDEBUG_MaqEstados` en `PROCOME_FormPpal_Qt.py` (por defecto
+  `0x03F`). Flags: `0x01` eventos, `0x02` estados, `0x04` tipos tx, `0x08` mensajes tx,
+  `0x10` tipos rx, `0x20` mensajes rx, `0x80` extra.
+- Modo de mensajes (`_sModoMensajes`): `'explicado'` o `'hex'`; se propaga con
+  `GestorMultiTarjeta.SetModoMensajes()`.
+- Configuración en `PROCOME.cfg` (XML). Para cambiarla: parar comunicación → cambiar →
+  guardar → arrancar.
+- **Versión**: incrementar `_VERSION` en `PROCOME_FormPpal_Qt.py` y añadir la entrada en
+  `VERSION.md` antes de cada commit funcional (MAJOR/MINOR/PATCH).
 
 ## Serial Port
 
-- pyserial with non-blocking reads (`timeout=0`), `write_timeout=0`.
-- Linux user must be in `dialout` group.
-- RTS is set to `False` before transmit (RS-485 control).
-- Serial port is opened once in `GestorMultiTarjeta.ArrancarComunicacion()` under lock, closed in `PararComunicacion()`.
-- Bus arbitration (`_oBusLock`) ensures only one thread transmits at a time; see Architecture above.
+- pyserial con lecturas no bloqueantes (`timeout=0`, `write_timeout=0`).
+- El usuario de Linux debe estar en el grupo `dialout` (o `uucp` en Arch).
+- RS-485: `rts = True` justo antes de escribir la trama; el retorno a `False` tras
+  escribir está comentado en el código (se pone a `False` al arrancar la comunicación).
+- `_oSerialLock` protege accesos al puerto; el `BusLock` garantiza que sólo una tarjeta
+  transmite a la vez y espera su respuesta.
+- Configuración típica de campo: `/dev/ttyUSB0`, 9600, 8, **paridad E**, 2 bits de parada.
+
+## Pruebas
+
+Sin hardware se puede usar un **pty** (`os.openpty()`) como puerto serie y un hilo que
+responda a las peticiones con tramas PROCOME válidas:
+
+- `PROCOME_ConstruirTramaTrm.TramaCorta_Construir` / `TramaLarga_Construir` para las
+  respuestas (PRM=0).
+- Trama corta (reset, FC=0) → ACK corto (FC=0).
+- Petición larga TYP 100 → respuesta TYP 100 con 1 medida; TYP 103 → ASDU 103 de 16
+  bytes con 0 estados.
+- Reiniciar el parser (`PROCOME_ConstruirTramaRcp.Reset()`) después de cada trama
+  completa; si no, la siguiente da error -14.
+- Comprobar que el estado llega a `Bucle`, que se reciben medidas/estados y que al parar
+  no queda ningún hilo vivo.
+
+Las ventanas se comprueban con Qt sobre X11/XWayland (`QT_QPA_PLATFORM=xcb`) y, si se
+quiere, con `xprop -id <win> _NET_WM_ALLOWED_ACTIONS` para verificar maximizar.
 
 ## Dependencies
 
-| Package | Required for |
+| Paquete | Para |
 |---|---|
-| `pyserial>=3.5` | Always |
-| `requests>=2.25.0` | Telegram notifications |
-| `PySide6>=6.5.0` | Qt GUI (only if using Qt version) |
+| `pyserial>=3.5` | Siempre |
+| `requests>=2.25.0` | Notificaciones Telegram |
+| `PySide6>=6.5.0` | GUI Qt |
 
-tkinter is stdlib; the Tkinter version (`PROCOME_FormPpal.py` + `PROCOME_Arranque.py`) does **not exist** anymore in recent commits — only Qt remains.
+## Releases
+
+- Etiqueta `vX.Y.Z` sobre `main` y push a `origin` (Gitea, `git.proenotec.com`).
+- El "lanzamiento" público se publica en GitHub `proenotec/procome` con el binario
+  `PROCOME-Linux` y `PROCOME.cfg`; `actualizar_procome.sh` descarga de ahí
+  (`https://github.com/proenotec/procome/releases/download/vX.Y.Z/PROCOME-Linux`).
+- El workflow `.github/workflows/build.yml` compila Linux y Windows al crear un release.

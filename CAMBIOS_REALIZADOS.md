@@ -1,5 +1,9 @@
 # Cambios Realizados en PROCOME
 
+> **Documento histórico (v1.0, interfaz Tkinter).** Describe cambios antiguos que ya no
+> reflejan el código actual (la interfaz es Qt/PySide6 desde la v2.x). El historial
+> vigente está en [`VERSION.md`](VERSION.md) y la guía técnica en [`AGENTS.md`](AGENTS.md).
+
 ## Resumen General
 
 Se han realizado mejoras significativas en el proyecto PROCOME para agregar opciones de configuración en la interfaz gráfica, hacer la aplicación ejecutable sin necesidad de consola, y crear scripts de instalación automáticos.

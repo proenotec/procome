@@ -1,71 +1,82 @@
-# Ejecutable PROCOME Qt - Guía de Uso
+# Ejecutable PROCOME - Guía de Uso
 
-## Compilación Exitosa ✅
-
-Se ha compilado exitosamente PROCOME Qt en un ejecutable standalone de **266 MB**.
-
-## Ubicación del Ejecutable
-
-```
-dist/PROCOME
-```
-
-## Cómo Ejecutar
-
-### Método 1: Desde el directorio del proyecto
-```bash
-./dist/PROCOME
-```
-
-### Método 2: Copiar a cualquier ubicación
-```bash
-# Copiar el ejecutable y configuración
-cp dist/PROCOME /ruta/destino/
-cp PROCOME.cfg /ruta/destino/
-
-# Ejecutar desde la nueva ubicación
-cd /ruta/destino
-./PROCOME
-```
-
-## Distribución
-
-Para distribuir PROCOME, necesitas incluir:
-
-1. **PROCOME** - El ejecutable compilado (266 MB)
-2. **PROCOME.cfg** - Archivo de configuración
-
-No es necesario instalar Python ni dependencias en el sistema destino.
-
-## Recompilar
-
-Para recompilar la aplicación después de hacer cambios:
+## Compilar
 
 ```bash
 ./build.sh
 ```
 
-Esto:
-- Limpia las compilaciones anteriores
-- Compila nuevamente con PyInstaller
-- Genera un nuevo ejecutable en `dist/PROCOME`
+El script:
 
-## Características
+1. Activa el `.venv` (créalo antes con `./run.sh` si no existe).
+2. Instala PyInstaller si falta.
+3. Limpia `build/`, `dist/` y `PROCOME.spec`.
+4. Compila con PyInstaller en modo `--onefile --windowed`.
+5. Deja el binario en `dist/PROCOME` (unos 290 MB: incluye Qt/PySide6 completo).
 
-- ✅ Ejecutable standalone (no requiere Python)
-- ✅ Todas las dependencias incluidas (PySide6, pyserial, etc.)
-- ✅ Interfaz gráfica Qt completa
-- ✅ 266 MB de tamaño
-- ✅ Compatible con Linux x86_64
+Compilar tarda varios minutos. Los avisos de PyInstaller sobre bibliotecas Qt opcionales
+son normales.
 
-## Compatibilidad
+## Ejecutar
 
-- **SO**: Linux (64-bit)
-- **Arquitectura**: x86_64
-- **Dependencias del sistema**: Solo las bibliotecas estándar de Linux y Qt
+```bash
+./dist/PROCOME                  # desde el directorio del proyecto
+./PROCOME                       # si lo copias junto a PROCOME.cfg
+```
+
+El binario lleva `PROCOME.cfg` embebido como copia inicial; si existe un `PROCOME.cfg`
+junto al ejecutable se usa ese (tu configuración).
+
+## Distribución
+
+Hay que distribuir dos ficheros:
+
+1. **PROCOME** — el ejecutable
+2. **PROCOME.cfg** — la configuración (se puede editar con la aplicación)
+
+No hace falta Python ni dependencias en el equipo destino. En Linux hacen falta las
+bibliotecas de sistema habituales de Qt; si al arrancar falla por `xcb`, instala:
+
+```bash
+sudo apt install libxcb-cursor0 libxcb-xinerama0
+```
+
+## Wayland y XWayland
+
+La aplicación fuerza `QT_QPA_PLATFORM=xcb` (XWayland) porque en Wayland nativo el
+compositor ignora la posición de las ventanas y no se puede repartir la pantalla
+consola 40 % / principal 60 %. Si el equipo no tiene XWayland, se puede forzar Wayland:
+
+```bash
+QT_QPA_PLATFORM=wayland ./PROCOME
+```
+
+En ese caso las ventanas no se colocarán automáticamente.
+
+## Releases
+
+El lanzamiento público se publica en GitHub (`proenotec/procome`) con estos assets:
+
+| Asset | Contenido |
+|---|---|
+| `PROCOME-Linux` | Binario Linux x86_64 |
+| `PROCOME-Windows.exe` | Binario Windows (lo genera el CI) |
+| `PROCOME.cfg` | Configuración por defecto |
+
+`actualizar_procome.sh` descarga `PROCOME-Linux` de la release más reciente y conserva
+el `PROCOME.cfg` del equipo.
+
+## Características del binario
+
+- ✅ Standalone (no requiere Python instalado)
+- ✅ PySide6, pyserial y requests incluidos
+- ✅ Interfaz Qt completa y ventana de consola
+- ✅ Linux x86_64 (y Windows x64 vía CI)
+- ✅ Fuerza XWayland para poder colocar las ventanas
 
 ## Notas
 
-- Los warnings sobre bibliotecas Qt opcionales durante la compilación son normales y no afectan la funcionalidad
-- El ejecutable es un binario ELF que puede ejecutarse directamente
-- La primera ejecución puede tardar unos segundos mientras extrae los recursos empaquetados
+- El binario es un ELF que se puede ejecutar directamente.
+- La primera ejecución tarda unos segundos mientras extrae los recursos empaquetados.
+- Para depurar, ejecútalo desde una terminal: la salida de la consola interna también
+  se escribe en la terminal.
