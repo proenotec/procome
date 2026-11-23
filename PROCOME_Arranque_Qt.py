@@ -5,6 +5,13 @@
 # #### Dependencias
 # #############################################################################################################################
 
+import os
+
+# En Wayland nativo el compositor ignora move()/setGeometry() y la aplicación no
+# puede colocar sus ventanas (consola 40% + principal 60%). Con XWayland (xcb)
+# sí se colocan. Para forzar Wayland: QT_QPA_PLATFORM=wayland en el entorno.
+os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
+
 import time
 import serial
 import PROCOME_FormPpal_Qt

@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 3.0.1
+## Versión Actual: 3.1.0
 
 ## Sistema de Versionado
 
@@ -70,6 +70,19 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v3.1.0 (2026-11-23)
+**Consola al 40 % y ventana principal al 60 %, sin solaparse**
+
+Características nuevas:
+- ✨ La consola ocupa el 40 % del ancho de la pantalla a la izquierda y la ventana principal el 60 % a la derecha
+- ✨ Al cerrar la consola, la ventana principal recupera todo el área útil
+- ✨ La aplicación usa XWayland (xcb) por defecto: en Wayland nativo el compositor ignora la posición de las ventanas. Se puede forzar Wayland con `QT_QPA_PLATFORM=wayland`
+
+Correcciones:
+- 🐛 La barra de título de la consola quedaba fuera de la pantalla: se colocaba por área de cliente en vez de por el marco de la ventana
+- 🐛 El layout de la ventana volvía a imponer un ancho mínimo e impedía encogerla al 60 %
+- 🐛 Comprobación de solape entre los marcos antes de dar por buena la colocación
 
 ### v3.0.1 (2026-11-23)
 **Corrección de la comunicación serie rota por el arbitraje de bus de v3.0.0**

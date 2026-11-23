@@ -6,6 +6,11 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
+# Wayland nativo no permite colocar ventanas desde la aplicación: sin esto, la
+# consola y la ventana principal no se reparten 40/60. Se puede sobrescribir
+# con QT_QPA_PLATFORM=wayland.
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+
 # Verificar que existe el entorno virtual, si no existe lo crea
 if [ ! -d ".venv" ]; then
     echo "No se encuentra el entorno virtual (.venv)"

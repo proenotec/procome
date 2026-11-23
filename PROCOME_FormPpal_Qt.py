@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QPush
                                QLineEdit, QComboBox, QSpinBox, QFrame, QGroupBox,
                                QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox,
                                QFileDialog, QDialog, QTextEdit, QCheckBox, QTabWidget,
-                               QTableWidget, QTableWidgetItem, QHeaderView)
+                               QTableWidget, QTableWidgetItem, QHeaderView, QLayout)
 from PySide6.QtCore import QTimer, Qt, Signal, QObject
 from PySide6.QtGui import QAction, QColor
 import PROCOME_General
@@ -80,7 +80,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "3.0.1"
+  _VERSION = "3.1.0"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -1773,92 +1773,126 @@ class FormPpal:
     QTimer.singleShot(300, self._ReorganizarVentanas)
     QTimer.singleShot(500, self._ReorganizarVentanas)
 
+  def _ColocarVentana(self, oVentana, iX, iY, iAncho, iAlto):
+    """Coloca el MARCO de la ventana en (iX, iY) con tamaño (iAncho, iAlto).
+
+    Se trabaja con coordenadas del marco (no del área de cliente) para que la
+    barra de título no quede fuera de la pantalla y para que dos ventanas
+    contiguas no se solapen por los bordes.
+    """
+    oVentana.showNormal()
+    self._qApp.processEvents()
+
+    # Marcar como movida por el usuario (bypass window manager placement)
+    oVentana.setAttribute(Qt.WidgetAttribute.WA_Moved, True)
+
+    # El layout vuelve a imponer un tamaño mínimo al activarse: soltarlo para
+    # poder encoger la ventana al porcentaje pedido
+    oLayout = oVentana.layout()
+    if oLayout is not None:
+      oLayout.setSizeConstraint(QLayout.SizeConstraint.SetNoConstraint)
+
+    # CRÍTICO: Eliminar restricciones de tamaño temporalmente para forzar resize
+    oVentana.setMinimumSize(0, 0)
+    oVentana.setMaximumSize(16777215, 16777215)  # Máximo de Qt
+    self._qApp.processEvents()
+
+    # Márgenes que añade el gestor de ventanas (bordes + barra de título)
+    gMarco = oVentana.frameGeometry()
+    gCliente = oVentana.geometry()
+    iMargenIzq = max(0, gCliente.x() - gMarco.x())
+    iMargenSup = max(0, gCliente.y() - gMarco.y())
+    iMargenDer = max(0, gMarco.right() - gCliente.right())
+    iMargenInf = max(0, gMarco.bottom() - gCliente.bottom())
+
+    iClienteX = iX + iMargenIzq
+    iClienteY = iY + iMargenSup
+    iClienteAncho = max(100, iAncho - iMargenIzq - iMargenDer)
+    iClienteAlto = max(100, iAlto - iMargenSup - iMargenInf)
+
+    # Usar move() y resize() separados (GNOME respeta mejor que setGeometry)
+    oVentana.move(iX, iY)
+    self._qApp.processEvents()
+    oVentana.resize(iClienteAncho, iClienteAlto)
+    self._qApp.processEvents()
+
+    # Forzar geometría del área de cliente también (doble ataque)
+    oVentana.setGeometry(iClienteX, iClienteY, iClienteAncho, iClienteAlto)
+    self._qApp.processEvents()
+
+  def _MarcoVentana(self, oVentana):
+    """Ancho del marco (bordes) que añade el gestor de ventanas."""
+    try:
+      return max(0, oVentana.frameGeometry().width() - oVentana.width())
+    except Exception:
+      return 0
+
   def _ReorganizarVentanas(self):
-    """Reorganiza las ventanas en la pantalla: consola MITAD IZQUIERDA, programa MITAD DERECHA"""
+    """Consola al 40% a la izquierda y ventana principal al 60% a la derecha.
+
+    El reparto se hace sobre el área útil de la pantalla (sin barra de tareas)
+    en coordenadas del marco de cada ventana, de modo que los marcos suman
+    exactamente el ancho de la pantalla y nunca se solapan.
+    """
     if self._qtConsoleWindow is None or not self._qtConsoleWindow.isVisible():
       return
 
     screen = self._qApp.primaryScreen()
-    screenGeometry = screen.availableGeometry()
+    gPantalla = screen.availableGeometry()
 
-    # Calcular mitades exactas
-    iMitadAncho = screenGeometry.width() // 2
+    iX = gPantalla.x()
+    iY = gPantalla.y()
+    iAnchoTotal = gPantalla.width()
+    iAltoTotal = gPantalla.height()
 
-    print(f'[VENTANAS] Reorganizando: Pantalla {screenGeometry.width()}x{screenGeometry.height()}, Mitad={iMitadAncho}')
+    iAnchoConsola = int(round(iAnchoTotal * 0.40))
+    iAnchoConsola = max(200, min(iAnchoConsola, iAnchoTotal - 200))
+    iAnchoPrincipal = iAnchoTotal - iAnchoConsola
 
-    # CONSOLA: Mitad izquierda completa (0, 0, mitad, alto_total)
-    consoleX = screenGeometry.x()
-    consoleY = screenGeometry.y()
-    consoleWidth = iMitadAncho
-    consoleHeight = screenGeometry.height()
+    # CONSOLA: 40% a la izquierda
+    self._ColocarVentana(self._qtConsoleWindow, iX, iY, iAnchoConsola, iAltoTotal)
 
-    # Forzar modo normal y reposicionar con move() + resize() (mejor compatibilidad GNOME)
-    self._qtConsoleWindow.showNormal()
-    self._qApp.processEvents()
+    # PROGRAMA: 60% a la derecha, justo a continuación
+    iXPrincipal = iX + iAnchoConsola
+    self._ColocarVentana(self._qtWindow, iXPrincipal, iY, iAnchoPrincipal, iAltoTotal)
 
-    # Marcar como movida por usuario (bypass window manager placement)
-    self._qtConsoleWindow.setAttribute(Qt.WidgetAttribute.WA_Moved, True)
+    # **** Comprobación de solape ***************************************************************************
 
-    # CRÍTICO: Eliminar restricciones de tamaño temporalmente para forzar resize
-    self._qtConsoleWindow.setMinimumSize(0, 0)
-    self._qtConsoleWindow.setMaximumSize(16777215, 16777215)  # Máximo de Qt
-    self._qApp.processEvents()
+    gConsola = self._qtConsoleWindow.frameGeometry()
+    gPrincipal = self._qtWindow.frameGeometry()
 
-    # Usar move() y resize() separados (GNOME respeta mejor que setGeometry)
-    self._qtConsoleWindow.move(consoleX, consoleY)
-    self._qApp.processEvents()
-    self._qtConsoleWindow.resize(consoleWidth, consoleHeight)
-    self._qApp.processEvents()
+    if gConsola.right() >= gPrincipal.left():
+      iSolape = gConsola.right() - gPrincipal.left() + 1
+      iAnchoConsola = max(200, iAnchoConsola - iSolape)
+      print(f'[VENTANAS] Marcos solapados {iSolape}px → consola a {iAnchoConsola}px')
+      self._ColocarVentana(self._qtConsoleWindow, iX, iY, iAnchoConsola, iAltoTotal)
+      gConsola = self._qtConsoleWindow.frameGeometry()
+      gPrincipal = self._qtWindow.frameGeometry()
 
-    # Forzar geometría con setGeometry también (doble ataque)
-    self._qtConsoleWindow.setGeometry(consoleX, consoleY, consoleWidth, consoleHeight)
-    self._qApp.processEvents()
+    bSinSolape = (gConsola.right() < gPrincipal.left()) or (gConsola.bottom() < gPrincipal.top()) \
+                 or (gPrincipal.bottom() < gConsola.top()) or (gPrincipal.right() < gConsola.left())
 
-    print(f'[VENTANAS] Consola → X={consoleX}, Y={consoleY}, W={consoleWidth}, H={consoleHeight}')
+    print(f'[VENTANAS] Pantalla útil {iAnchoTotal}x{iAltoTotal} → '
+          f'consola {gConsola.width()}px ({100.0 * gConsola.width() / iAnchoTotal:.1f}%), '
+          f'principal {gPrincipal.width()}px ({100.0 * gPrincipal.width() / iAnchoTotal:.1f}%)')
+    print(f'[VENTANAS] Consola REAL → X={gConsola.left()}, Y={gConsola.top()}, '
+          f'W={gConsola.width()}, H={gConsola.height()}')
+    print(f'[VENTANAS] Principal REAL → X={gPrincipal.left()}, Y={gPrincipal.top()}, '
+          f'W={gPrincipal.width()}, H={gPrincipal.height()}')
+    print(f'[VENTANAS] sin solape: {"OK" if bSinSolape else "FALLO"}')
 
-    # Verificar posición real después del movimiento
-    realX = self._qtConsoleWindow.x()
-    realY = self._qtConsoleWindow.y()
-    realW = self._qtConsoleWindow.width()
-    realH = self._qtConsoleWindow.height()
-    print(f'[VENTANAS] Consola REAL → X={realX}, Y={realY}, W={realW}, H={realH}')
+  def _RestaurarVentanaPrincipal(self):
+    """Devuelve la ventana principal a todo el área útil (al cerrar la consola)."""
+    if self._qtWindow is None or not self._qtWindow.isVisible():
+      return
+    if self._qApp is not None and self._qApp.closingDown():
+      return
 
-    # PROGRAMA: Mitad derecha completa (mitad, 0, mitad, alto_total)
-    mainWindowX = screenGeometry.x() + iMitadAncho
-    mainWindowY = screenGeometry.y()
-    mainWindowWidth = iMitadAncho
-    mainWindowHeight = screenGeometry.height()
-
-    # Forzar modo normal y reposicionar con move() + resize()
-    self._qtWindow.showNormal()
-    self._qApp.processEvents()
-
-    # Marcar como movida por usuario
-    self._qtWindow.setAttribute(Qt.WidgetAttribute.WA_Moved, True)
-
-    # CRÍTICO: Eliminar restricciones de tamaño temporalmente para forzar resize
-    self._qtWindow.setMinimumSize(0, 0)
-    self._qtWindow.setMaximumSize(16777215, 16777215)  # Máximo de Qt
-    self._qApp.processEvents()
-
-    # Usar move() y resize() separados
-    self._qtWindow.move(mainWindowX, mainWindowY)
-    self._qApp.processEvents()
-    self._qtWindow.resize(mainWindowWidth, mainWindowHeight)
-    self._qApp.processEvents()
-
-    # Forzar geometría con setGeometry también (doble ataque)
-    self._qtWindow.setGeometry(mainWindowX, mainWindowY, mainWindowWidth, mainWindowHeight)
-    self._qApp.processEvents()
-
-    print(f'[VENTANAS] Principal → X={mainWindowX}, Y={mainWindowY}, W={mainWindowWidth}, H={mainWindowHeight}')
-
-    # Verificar posición real
-    realX = self._qtWindow.x()
-    realY = self._qtWindow.y()
-    realW = self._qtWindow.width()
-    realH = self._qtWindow.height()
-    print(f'[VENTANAS] Principal REAL → X={realX}, Y={realY}, W={realW}, H={realH}')
+    gPantalla = self._qApp.primaryScreen().availableGeometry()
+    self._ColocarVentana(self._qtWindow, gPantalla.x(), gPantalla.y(),
+                         gPantalla.width(), gPantalla.height())
+    print(f'[VENTANAS] Consola cerrada → principal a {gPantalla.width()}x{gPantalla.height()} '
+          f'en X={gPantalla.x()}, Y={gPantalla.y()}')
 
   def _EscribirEnConsolaThreadSafe(self, texto):
     """Escribe texto en la ventana de consola (thread-safe, llamado vía señal Qt)
@@ -1967,6 +2001,9 @@ class FormPpal:
     if self._oConsoleCapture is not None:
       sys.stdout = self._oConsoleCapture.original_stdout
       self._oConsoleCapture = None
+
+    # La consola ya no existe: la principal recupera todo el área útil
+    self._RestaurarVentanaPrincipal()
 
     self._qtConsoleWindow = None
     self._qtConsoleText = None
