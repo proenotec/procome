@@ -168,13 +168,16 @@ class DetectorDispositivos:
             # Crear copia profunda del diccionario
             dCopia = {}
             for iDireccion, dInfo in self._dDispositivos.items():
+                # .get() defensivo: una entrada incompleta no debe romper el
+                # volcado de todos los dispositivos
+                fUltima = dInfo.get('UltimaActividad', 0.0)
                 dCopia[iDireccion] = {
-                    'Direccion': dInfo['Direccion'],
-                    'UltimaActividad': dInfo['UltimaActividad'],
-                    'Contador': dInfo['Contador'],
-                    'TiposMensajes': dInfo['TiposMensajes'].copy(),  # Copiar set
-                    'Estado': dInfo['Estado'],
-                    'PrimeraMencion': dInfo['PrimeraMencion']
+                    'Direccion': dInfo.get('Direccion', iDireccion),
+                    'UltimaActividad': fUltima,
+                    'Contador': dInfo.get('Contador', 0),
+                    'TiposMensajes': set(dInfo.get('TiposMensajes', set())),
+                    'Estado': dInfo.get('Estado', 'Timeout'),
+                    'PrimeraMencion': dInfo.get('PrimeraMencion', fUltima)
                 }
             return dCopia
 

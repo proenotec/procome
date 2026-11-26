@@ -8,6 +8,7 @@ import time
 import sys
 import os
 import math
+import traceback
 import struct
 import threading
 import subprocess
@@ -80,7 +81,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "3.1.1"
+  _VERSION = "3.1.2"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -957,9 +958,6 @@ class FormPpal:
 
   def _ActualizarTablaMonitor(self):
     """Actualiza la tabla de dispositivos detectados en modo Monitor"""
-    import time
-    import traceback
-
     try:
       # Obtener dispositivos detectados
       dDispositivos = self._oGestorTarjetas.ObtenerDispositivosDetectados()
@@ -976,78 +974,12 @@ class FormPpal:
         self._qtTablaMonitor.clearContents()
         self._qtTablaMonitor.setRowCount(iFilasNecesarias)
 
-      # Llenar tabla
+      # Llenar tabla. Un error en una fila no debe dejar en blanco el resto.
       for iFila, iDireccion in enumerate(lDirecciones):
-        dInfo = dDispositivos[iDireccion]
-
-        # Columna 0: Dirección
-        item = self._qtTablaMonitor.item(iFila, 0)
-        if item is None:
-          item = QTableWidgetItem()
-          item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-          self._qtTablaMonitor.setItem(iFila, 0, item)
-        item.setText(str(dInfo['Direccion']))
-
-        # Columna 1: Estado (con color)
-        sEstado = dInfo['Estado']
-        item = self._qtTablaMonitor.item(iFila, 1)
-        if item is None:
-          item = QTableWidgetItem()
-          item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-          self._qtTablaMonitor.setItem(iFila, 1, item)
-        item.setText(sEstado)
-        if sEstado == 'Activo':
-          item.setBackground(QColor('#90EE90'))  # Verde claro
-        else:
-          item.setBackground(QColor('#FFB6C1'))  # Rojo claro
-
-        # Columna 2: Última Actividad (tiempo transcurrido)
-        fTiempoDesdeActividad = time.time() - dInfo['UltimaActividad']
-        if fTiempoDesdeActividad < 60:
-          sTiempo = f'{int(fTiempoDesdeActividad)}s'
-        elif fTiempoDesdeActividad < 3600:
-          sTiempo = f'{int(fTiempoDesdeActividad / 60)}m {int(fTiempoDesdeActividad % 60)}s'
-        else:
-          sTiempo = f'{int(fTiempoDesdeActividad / 3600)}h {int((fTiempoDesdeActividad % 3600) / 60)}m'
-        item = self._qtTablaMonitor.item(iFila, 2)
-        if item is None:
-          item = QTableWidgetItem()
-          item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-          self._qtTablaMonitor.setItem(iFila, 2, item)
-        item.setText(sTiempo)
-
-        # Columna 3: Contador de tramas
-        item = self._qtTablaMonitor.item(iFila, 3)
-        if item is None:
-          item = QTableWidgetItem()
-          item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-          self._qtTablaMonitor.setItem(iFila, 3, item)
-        item.setText(str(dInfo['Contador']))
-
-        # Columna 4: Tipos de mensajes (ASDU)
-        lTipos = sorted(dInfo['TiposMensajes'])
-        sTipos = ', '.join(str(t) for t in lTipos)
-        item = self._qtTablaMonitor.item(iFila, 4)
-        if item is None:
-          item = QTableWidgetItem()
-          item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-          self._qtTablaMonitor.setItem(iFila, 4, item)
-        item.setText(sTipos)
-
-        # Columna 5: Primera Detección (tiempo desde inicio)
-        fTiempoDesdeDeteccion = time.time() - dInfo['PrimeraMencion']
-        if fTiempoDesdeDeteccion < 60:
-          sTiempo = f'{int(fTiempoDesdeDeteccion)}s'
-        elif fTiempoDesdeDeteccion < 3600:
-          sTiempo = f'{int(fTiempoDesdeDeteccion / 60)}m {int(fTiempoDesdeDeteccion % 60)}s'
-        else:
-          sTiempo = f'{int(fTiempoDesdeDeteccion / 3600)}h {int((fTiempoDesdeDeteccion % 3600) / 60)}m'
-        item = self._qtTablaMonitor.item(iFila, 5)
-        if item is None:
-          item = QTableWidgetItem()
-          item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-          self._qtTablaMonitor.setItem(iFila, 5, item)
-        item.setText(sTiempo)
+        try:
+          self._RellenarFilaMonitor(iFila, dDispositivos[iDireccion])
+        except Exception as e:
+          print(f'[TABLA] Error al rellenar la fila de la dirección {iDireccion}: {e}')
 
       # Forzar actualización visual
       self._qtTablaMonitor.viewport().update()
@@ -1055,6 +987,61 @@ class FormPpal:
     except Exception as e:
       print(f'[TABLA] ERROR: {str(e)}')
       traceback.print_exc()
+
+
+  def _RellenarFilaMonitor(self, iFila, dInfo):
+    """Rellena una fila de la tabla del Monitor con los datos de un dispositivo"""
+
+    def _ClaveTipo(t):
+      # En TiposMensajes conviven ASDU numéricos (trama larga) y cadenas
+      # 'F<n>' (trama corta); no se pueden comparar entre sí directamente.
+      if isinstance(t, str):
+        return (1, t)
+      return (0, t)
+
+    def _ItemColumna(iColumna, sTexto):
+      item = self._qtTablaMonitor.item(iFila, iColumna)
+      if item is None:
+        item = QTableWidgetItem()
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._qtTablaMonitor.setItem(iFila, iColumna, item)
+      item.setText(sTexto)
+      return item
+
+    def _TiempoTranscurrido(fSegundos):
+      if fSegundos < 0:
+        fSegundos = 0
+      if fSegundos < 60:
+        return f'{int(fSegundos)}s'
+      if fSegundos < 3600:
+        return f'{int(fSegundos / 60)}m {int(fSegundos % 60)}s'
+      return f'{int(fSegundos / 3600)}h {int((fSegundos % 3600) / 60)}m'
+
+    # Columna 0: Dirección
+    _ItemColumna(0, str(dInfo['Direccion']))
+
+    # Columna 1: Estado (con color)
+    sEstado = dInfo['Estado']
+    item = _ItemColumna(1, sEstado)
+    if sEstado == 'Activo':
+      item.setBackground(QColor('#90EE90'))  # Verde claro
+    else:
+      item.setBackground(QColor('#FFB6C1'))  # Rojo claro
+
+    # Columna 2: Última Actividad (tiempo transcurrido)
+    fUltima = dInfo.get('UltimaActividad') or 0.0
+    _ItemColumna(2, _TiempoTranscurrido(time.time() - fUltima) if fUltima else '—')
+
+    # Columna 3: Contador de tramas
+    _ItemColumna(3, str(dInfo['Contador']))
+
+    # Columna 4: Tipos de mensajes (ASDU y funciones de trama corta)
+    lTipos = sorted(dInfo['TiposMensajes'], key=_ClaveTipo)
+    _ItemColumna(4, ', '.join(str(t) for t in lTipos))
+
+    # Columna 5: Primera Detección (tiempo desde el inicio)
+    fPrimera = dInfo.get('PrimeraMencion') or 0.0
+    _ItemColumna(5, _TiempoTranscurrido(time.time() - fPrimera) if fPrimera else '—')
 
 
   def _LimpiarHistorialMonitor(self):

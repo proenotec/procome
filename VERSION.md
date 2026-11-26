@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 3.1.1
+## Versión Actual: 3.1.2
 
 ## Sistema de Versionado
 
@@ -70,6 +70,16 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v3.1.2 (2026-11-26)
+**Tabla del Monitor: líneas en blanco al detectar tarjetas**
+
+Correcciones:
+- 🐛 `sorted()` lanzaba `TypeError` al mezclar ASDU numéricos y funciones de trama corta (`'F0'`) en `TiposMensajes`. La excepción cortaba el rellenado y dejaba en blanco esa fila y todas las siguientes hasta pulsar "Limpiar Historial"
+- 🐛 Un error al rellenar una fila ya no impide rellenar el resto
+- 🐛 `traceback` no estaba importado en `PROCOME_FormPpal_Qt.py` (el manejador de errores fallaba con `NameError`)
+- 🐛 `DetectorDispositivos.ObtenerDispositivos()` tolera entradas incompletas
+- 🔧 Las filas sin datos muestran `—` en los tiempos
 
 ### v3.1.1 (2026-11-23)
 **Botón de maximizar/restaurar en la ventana principal**
