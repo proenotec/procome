@@ -581,7 +581,10 @@ class GestorMultiTarjeta:
 
     if bActivar:
       import PROCOME_DetectorDispositivos
-      self._oDetectorDispositivos = PROCOME_DetectorDispositivos.DetectorDispositivos(30.0)
+      fTimeout = 30.0
+      if self._oFichCfg is not None:
+        fTimeout = float(self._oFichCfg.Parametros_Get().get('Monitor.TimeoutSegundos', 30))
+      self._oDetectorDispositivos = PROCOME_DetectorDispositivos.DetectorDispositivos(fTimeout)
       self._dEstadosMonitor = {}
     else:
       # Detener thread vigilante si existe

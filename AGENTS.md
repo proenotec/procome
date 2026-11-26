@@ -59,6 +59,8 @@ se colocarán solas).
   mientras `sEvento != 'Procesado'`, devolviendo `'ProcesarDeNuevo'` para reentrar.
 - **Modo Monitor**: escucha pasiva RS-485 con `_ThreadLectorMonitor` +
   `_ThreadVigilanteTimeouts` y `DetectorDispositivos` (sólo respuestas, PRM=0).
+  El umbral de inactividad es `Monitor.TimeoutSegundos` (5–3600 s, por defecto 30),
+  configurable desde la pestaña Monitor o en `PROCOME.cfg`; se aplica en caliente.
 
 ## Ventanas
 
@@ -96,6 +98,8 @@ se colocarán solas).
   `GestorMultiTarjeta.SetModoMensajes()`.
 - Configuración en `PROCOME.cfg` (XML). Para cambiarla: parar comunicación → cambiar →
   guardar → arrancar.
+- Al añadir parámetros nuevos a `FichConfig`, los ficheros antiguos siguen cargando:
+  los parámetros ausentes toman su valor por defecto (sólo los desconocidos son error).
 - **Versión**: incrementar `_VERSION` en `PROCOME_FormPpal_Qt.py` y añadir la entrada en
   `VERSION.md` antes de cada commit funcional (MAJOR/MINOR/PATCH).
 
@@ -108,7 +112,8 @@ se colocarán solas).
   `NotificarEstadoComunicacion(estado == 2, dirección)`. La máquina de estados **no** debe
   notificar (se duplicaría).
 - **Modo Monitor**: `_ThreadVigilanteTimeouts` pasa el estado de cada dispositivo cada
-  segundo a `NotificarEstadoMonitor(dirección, estado == 'Activo')`.
+  segundo a `NotificarEstadoMonitor(dirección, estado == 'Activo')`. El umbral es
+  `Monitor.TimeoutSegundos` (`DetectorDispositivos.TimeoutSegundos`).
 - Configuración: `Telegram.Habilitado/Token/ChatID/NombreBot` en `PROCOME.cfg` (o diálogo
   Configuración → Telegram, que tiene botón **Probar**). Sin `Habilitado=True` no se envía nada.
 

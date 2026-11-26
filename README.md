@@ -67,6 +67,7 @@ Edita `PROCOME.cfg` o usa el menú **Configuración** de la aplicación:
 - **Medidas / Estados / Órdenes** y **dirección PROCOME**
 - **Tarjetas**: habilitar y dirección de cada una (hasta 6)
 - **Telegram**: bot, token y chat
+- **Monitor**: timeout sin actividad (5–3600 s) para marcar tarjetas en TIMEOUT
 - **Consola**: líneas máximas, modo de mensajes (`explicado`/`hex`), beeps
 
 Para aplicar cambios: **parar** la comunicación, cambiar, **guardar** y **arrancar**.

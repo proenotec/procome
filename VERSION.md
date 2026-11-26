@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 3.2.0
+## Versión Actual: 3.3.0
 
 ## Sistema de Versionado
 
@@ -70,6 +70,17 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v3.3.0 (2026-11-26)
+**Timeout de inactividad del modo Monitor configurable**
+
+Características nuevas:
+- ✨ Nuevo parámetro `Monitor.TimeoutSegundos` (5–3600 s, por defecto 30) en `PROCOME.cfg`
+- ✨ Control en la pestaña **Monitor de Bus** para cambiarlo en caliente, sin reiniciar
+- ✨ Se aplica al vigilante de timeouts y a los avisos de Telegram de ACTIVO/TIMEOUT
+
+Correcciones:
+- 🐛 El cargador de configuración exigía que el número de parámetros coincidiera exactamente: cualquier versión nueva habría invalidado los `PROCOME.cfg` existentes. Ahora los parámetros ausentes toman su valor por defecto (con aviso) y sólo los desconocidos son un error
 
 ### v3.2.0 (2026-11-26)
 **Avisos de Telegram por cambio de estado (modo normal y Monitor)**

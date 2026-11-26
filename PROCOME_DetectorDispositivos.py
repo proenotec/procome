@@ -124,6 +124,22 @@ class DetectorDispositivos:
         return True
 
     # ***************************************************************************************************************************
+    # **** Timeout configurable
+    # ***************************************************************************************************************************
+
+    @property
+    def TimeoutSegundos(self):
+        return self._fTimeoutSegundos
+
+    @TimeoutSegundos.setter
+    def TimeoutSegundos(self, valor):
+        try:
+            fValor = float(valor)
+        except (TypeError, ValueError):
+            return
+        self._fTimeoutSegundos = max(1.0, fValor)
+
+    # ***************************************************************************************************************************
     # **** Actualizar Timeouts
     # ***************************************************************************************************************************
 

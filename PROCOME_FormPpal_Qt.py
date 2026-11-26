@@ -81,7 +81,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "3.2.0"
+  _VERSION = "3.3.0"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -586,12 +586,15 @@ class FormPpal:
     tabWidget = QWidget()
     tabLayout = QVBoxLayout(tabWidget)
 
+    dCfgMonitor = self._oFichCfg.Parametros_Get()
+    iTimeoutMonitor = int(dCfgMonitor.get('Monitor.TimeoutSegundos', 30))
+
     # ==== Instrucciones ==========================================================================================================
 
     lblInstrucciones = QLabel(
       'El Modo Monitor escucha pasivamente el tráfico del bus RS-485 sin transmitir datos.\n'
       'Detecta automáticamente dispositivos PROCOME y muestra su actividad en tiempo real.\n'
-      'Los dispositivos que no transmitan durante más de 30 segundos se marcarán como "Timeout".'
+      f'Los dispositivos que no transmitan durante más de {iTimeoutMonitor} segundos se marcarán como "Timeout".'
     )
     lblInstrucciones.setStyleSheet("color: #333333; padding: 10px; background-color: #F0F0F0;")
     lblInstrucciones.setWordWrap(True)
@@ -642,6 +645,22 @@ class FormPpal:
     lblAyuda = QLabel('← Marque esta casilla para comenzar')
     lblAyuda.setStyleSheet("color: #666; font-size: 12px; font-style: italic;")
     monitorFrameLayout.addWidget(lblAyuda)
+
+    # ==== Timeout de inactividad configurable =====================================================================================
+
+    monitorFrameLayout.addSpacing(25)
+    lblTimeout = QLabel('Timeout sin actividad:')
+    lblTimeout.setStyleSheet("color: #333333; font-weight: bold;")
+    monitorFrameLayout.addWidget(lblTimeout)
+
+    self._qtSpinTimeoutMonitor = QSpinBox()
+    self._qtSpinTimeoutMonitor.setRange(5, 3600)
+    self._qtSpinTimeoutMonitor.setSuffix(' s')
+    self._qtSpinTimeoutMonitor.setValue(iTimeoutMonitor)
+    self._qtSpinTimeoutMonitor.setToolTip(
+      'Tiempo sin recibir tramas para marcar una tarjeta como TIMEOUT (5-3600 s)')
+    self._qtSpinTimeoutMonitor.valueChanged.connect(self._CambiarTimeoutMonitor)
+    monitorFrameLayout.addWidget(self._qtSpinTimeoutMonitor)
 
     monitorFrameLayout.addStretch()
     tabLayout.addWidget(monitorFrame)
@@ -907,6 +926,19 @@ class FormPpal:
   # ***************************************************************************************************************************
   # **** MODO MONITOR
   # ***************************************************************************************************************************
+
+  def _CambiarTimeoutMonitor(self, iSegundos):
+    """Guarda y aplica el timeout de inactividad del modo Monitor"""
+    try:
+      if not self._oFichCfg.Monitor_TimeoutSegundos_Set(int(iSegundos)):
+        return
+      self._oFichCfg.SalvarEnFichero()
+      if self._oGestorTarjetas._oDetectorDispositivos is not None:
+        self._oGestorTarjetas._oDetectorDispositivos.TimeoutSegundos = iSegundos
+      print(f'[MONITOR] Timeout de inactividad: {int(iSegundos)} s')
+    except Exception as e:
+      print(f'[MONITOR] No se pudo guardar el timeout: {e}')
+
 
   def _CambiarModoMonitor(self, state):
     """Activa o desactiva el modo Monitor pasivo"""

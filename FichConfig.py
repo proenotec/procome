@@ -70,7 +70,9 @@ class FichConfig:
                          # Configuración de la consola
                          'Consola.MaxLineas'         : 5000,
                          'Consola.ModoMensajes'      : 'explicado',  # 'explicado' o 'hex'
-                         'Consola.BeepHabilitado'    : False
+                         'Consola.BeepHabilitado'    : False,
+                         # Configuración del modo Monitor
+                         'Monitor.TimeoutSegundos'   : 30
                        }
     self._sNombreFich= self._sNombreFich_Def
     
@@ -196,6 +198,15 @@ class FichConfig:
   def Consola_ModoMensajes_Set(self, Valor):
     if ((type(Valor) != str) or (Valor not in ['explicado', 'hex'])) : return False
     self._dParametros['Consola.ModoMensajes']= Valor
+    return True
+
+  # *** Parametro= Consola.BeepHabilitado **************************************************************************************
+
+  # *** Parametro= Monitor.TimeoutSegundos ************************************************************************************
+
+  def Monitor_TimeoutSegundos_Set(self, Valor):
+    if ((type(Valor) != int) or (Valor < 5) or (Valor > 3600)) : return False
+    self._dParametros['Monitor.TimeoutSegundos']= Valor
     return True
 
   # *** Parametro= Consola.BeepHabilitado **************************************************************************************
@@ -366,6 +377,13 @@ class FichConfig:
     esteApartado.setAttribute(sNombreParametro.split('.')[1], 'True' if self._dParametros[sNombreParametro] else 'False')
     raiz.appendChild(esteApartado)
 
+    # **** Crear apartado 'Monitor' ********************************************************************************************
+
+    esteApartado = documento.createElement('Monitor')
+    sNombreParametro= 'Monitor.TimeoutSegundos'
+    esteApartado.setAttribute(sNombreParametro.split('.')[1], str(self._dParametros[sNombreParametro]))
+    raiz.appendChild(esteApartado)
+
     # **** Finalizar la creacion de la configuracion **************************************************************************
 
     documento.appendChild(raiz)
@@ -442,29 +460,22 @@ class FichConfig:
     tNombreParametrosEsperados= list(self._dParametros)
     tNombreParametrosRecibidos= list(dictAux)
 
-    if len(tNombreParametrosEsperados) != len(tNombreParametrosRecibidos) :
-      sRetorno= 'ERROR al leer el fichero de configuracion: Los numero de parametros recibidos no coincide con el de los esperados'
-      iHayError= 3
-    else :
-      for sNombre in tNombreParametrosEsperados :
-        if not sNombre in tNombreParametrosRecibidos :
-          if iHayError < 1 : sMensajes= sMensajes + '- Parametros esperados pero no recibidos:'
-          sMensajes= sMensajes + '   ' + sNombre
-          iHayError= 1
-    
-      for sNombre in tNombreParametrosRecibidos :
-        if not sNombre in tNombreParametrosEsperados :
-          if iHayError < 2 : sMensajes= sMensajes + '- Parametros recibidos pero no esperados:'
-          sMensajes= sMensajes + '   ' + sNombre
-          iHayError= 2
-          
-      if iHayError > 0 :     
-        sRetorno= 'ERROR al leer el fichero de configuracion: Los parametros recibidos no coinciden con los esperados'
+    # Compatibilidad hacia atrás: si falta algún parámetro (configuración
+    # guardada por una versión anterior) se mantiene su valor por defecto y se
+    # avisa, en lugar de rechazar todo el fichero. Un parámetro desconocido sí
+    # es un error.
+    lParametrosQueFaltan= [s for s in tNombreParametrosEsperados if s not in tNombreParametrosRecibidos]
+    lParametrosSobrantes= [s for s in tNombreParametrosRecibidos if s not in tNombreParametrosEsperados]
 
-    if iHayError > 0 : 
-      sRetorno+= 'Nombre del fichero de configuracion:\n  <' + self._sNombreFich + '>'
-      sRetorno+= '\nListado de errores:\n' + sMensajes
+    if lParametrosSobrantes :
+      sRetorno = 'ERROR al leer el fichero de configuracion: Parametros no reconocidos'
+      sRetorno+= '\nNombre del fichero de configuracion:\n  <' + self._sNombreFich + '>'
+      sRetorno+= '\nListado de errores:\n' + '\n'.join('   ' + s for s in lParametrosSobrantes)
       return sRetorno
+
+    if lParametrosQueFaltan :
+      print('CONFIG: parametros ausentes en el fichero (se usan los valores por defecto): '
+            + ', '.join(lParametrosQueFaltan))
     
     # **** Comprobar todos los datos antes de aceptarlos. Asignar los datos leidos a las variables ****************************
 
@@ -591,6 +602,12 @@ class FichConfig:
       elif sNombreParametro == 'Consola.BeepHabilitado' :
         sValor= dictAux[sNombreParametro].strip()
         bHayError= not (self.Consola_BeepHabilitado_Set(sValor == 'True'))
+
+      # --- Monitor.TimeoutSegundos ----------------------------------------------------------------------------------------
+
+      elif sNombreParametro == 'Monitor.TimeoutSegundos' :
+        sValor= dictAux[sNombreParametro].strip()
+        bHayError= not (self.Monitor_TimeoutSegundos_Set(int(sValor)))
 
       if (bHayError) :
         sTxtError+= '- ERROR: Valor de ' + sNombreParametro + ' no vlido. Valor= ' + sValor + '\n'
