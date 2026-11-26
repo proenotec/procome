@@ -32,10 +32,29 @@ class PROCOME_Telegram:
     self._sToken = sToken.strip()
     self._sChatID = sChatID.strip()
     self._sNombreBot = sNombreBot.strip()
-    self._bUltimoComunicando = None  # Estado anterior de comunicación
+
+    # Estado anterior por dirección: {direccion: bool comunicando}
+    # (antes era un único flag compartido por todas las tarjetas, con lo que
+    # las notificaciones de unas interferían con las de otras)
+    self._dUltimoComunicando = {}
+
+    # Estado anterior por dirección en modo Monitor: {direccion: bool activo}
+    self._dUltimoMonitor = {}
 
     # Validar configuración
     self._bConfiguracionValida = self._ValidarConfiguracion()
+
+  # ***************************************************************************************************************************
+  # **** Propiedad Habilitado
+  # ***************************************************************************************************************************
+
+  @property
+  def Habilitado(self):
+    return bool(self._bHabilitado)
+
+  @property
+  def ConfiguracionValida(self):
+    return bool(self._bConfiguracionValida)
 
   # ***************************************************************************************************************************
   # **** Validar configuración
@@ -106,7 +125,7 @@ class PROCOME_Telegram:
       respuesta = requests.post(url, data=datos, timeout=10)
 
       if respuesta.status_code == 200:
-        print(f'TELEGRAM: Mensaje enviado correctamente')
+        print('TELEGRAM: Mensaje enviado correctamente')
       else:
         print(f'TELEGRAM: Error al enviar mensaje. Código: {respuesta.status_code}')
         print(f'TELEGRAM: Respuesta: {respuesta.text}')
@@ -119,12 +138,33 @@ class PROCOME_Telegram:
       print(f'TELEGRAM: Error inesperado: {e}')
 
   # ***************************************************************************************************************************
-  # **** Notificar cambio de estado de comunicación
+  # **** Enviar un mensaje de prueba
+  # ***************************************************************************************************************************
+
+  def EnviarMensajePrueba(self):
+    """Envía un mensaje de prueba para validar la configuración"""
+    if not self._bConfiguracionValida:
+      return False
+
+    sFecha = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    sMensaje = '<b>🔔 PROCOME</b>\n\n'
+    sMensaje += 'Notificaciones configuradas correctamente.\n\n'
+    sMensaje += f'🕐 Fecha: {sFecha}'
+    if self._sNombreBot:
+      sMensaje += f'\n🤖 Bot: {self._sNombreBot}'
+    self._EnviarMensaje(sMensaje)
+    return True
+
+  # ***************************************************************************************************************************
+  # **** Notificar cambio de estado de comunicación (modo normal)
   # ***************************************************************************************************************************
 
   def NotificarEstadoComunicacion(self, bComunicando, iDireccion):
     """
-    Notifica cambios en el estado de comunicación con la tarjeta
+    Notifica cambios en el estado de comunicación con la tarjeta.
+
+    Sólo envía mensaje cuando el estado cambia respecto al anterior de esa
+    misma dirección; la primera observación se guarda sin notificar.
 
     Args:
         bComunicando: True si está comunicando, False si no
@@ -133,33 +173,77 @@ class PROCOME_Telegram:
     if not self._bConfiguracionValida:
       return
 
-    # Solo enviar notificación si hay un cambio de estado
-    if self._bUltimoComunicando == bComunicando:
+    bAhora = bool(bComunicando)
+    bAnterior = self._dUltimoComunicando.get(iDireccion)
+    self._dUltimoComunicando[iDireccion] = bAhora
+
+    # Primera observación o sin cambios: no notificar
+    if bAnterior is None or bAnterior == bAhora:
       return
 
-    self._bUltimoComunicando = bComunicando
-
-    # Generar el mensaje
     sFecha = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    if bComunicando:
-      # La tarjeta volvió a estar disponible
-      sMensaje = f"<b>✅ TARJETA DISPONIBLE</b>\n\n"
-      sMensaje += f"La tarjeta PROCOME ha vuelto a responder.\n\n"
-      sMensaje += f"📍 Dirección: {iDireccion}\n"
-      sMensaje += f"🕐 Fecha: {sFecha}"
+    if bAhora:
+      sMensaje = '<b>✅ TARJETA DISPONIBLE</b>\n\n'
+      sMensaje += 'La tarjeta PROCOME ha vuelto a responder.\n\n'
     else:
-      # La tarjeta dejó de estar disponible
-      sMensaje = f"<b>⚠️ TARJETA NO DISPONIBLE</b>\n\n"
-      sMensaje += f"La tarjeta PROCOME ha dejado de responder.\n\n"
-      sMensaje += f"📍 Dirección: {iDireccion}\n"
-      sMensaje += f"🕐 Fecha: {sFecha}"
+      sMensaje = '<b>⚠️ TARJETA NO DISPONIBLE</b>\n\n'
+      sMensaje += 'La tarjeta PROCOME ha dejado de responder.\n\n'
 
-    # Agregar nombre del bot si está configurado
+    sMensaje += f'📍 Dirección: {iDireccion}\n'
+    sMensaje += f'🕐 Fecha: {sFecha}'
+
     if self._sNombreBot:
-      sMensaje += f"\n🤖 Bot: {self._sNombreBot}"
+      sMensaje += f'\n🤖 Bot: {self._sNombreBot}'
 
-    # Enviar el mensaje
     self._EnviarMensaje(sMensaje)
+
+  # ***************************************************************************************************************************
+  # **** Notificar cambio de estado en modo Monitor
+  # ***************************************************************************************************************************
+
+  def NotificarEstadoMonitor(self, iDireccion, bActivo):
+    """
+    Notifica cambios ACTIVO <-> TIMEOUT de un dispositivo en modo Monitor.
+
+    Args:
+        iDireccion: Dirección PROCOME del dispositivo
+        bActivo: True si ha vuelto a dar señal, False si ha entrado en timeout
+    """
+    if not self._bConfiguracionValida:
+      return
+
+    bAhora = bool(bActivo)
+    bAnterior = self._dUltimoMonitor.get(iDireccion)
+    self._dUltimoMonitor[iDireccion] = bAhora
+
+    if bAnterior is None or bAnterior == bAhora:
+      return
+
+    sFecha = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    if bAhora:
+      sMensaje = '<b>📡 TARJETA ACTIVA DE NUEVO</b>\n\n'
+      sMensaje += 'El dispositivo ha vuelto a transmitir en el bus (fin del timeout).\n\n'
+    else:
+      sMensaje = '<b>📡 TARJETA EN TIMEOUT</b>\n\n'
+      sMensaje += 'El dispositivo ha dejado de transmitir en el bus.\n\n'
+
+    sMensaje += f'📍 Dirección: {iDireccion}\n'
+    sMensaje += f'🕐 Fecha: {sFecha}'
+    sMensaje += '\n👁️ Modo: Monitor pasivo'
+
+    if self._sNombreBot:
+      sMensaje += f'\n🤖 Bot: {self._sNombreBot}'
+
+    self._EnviarMensaje(sMensaje)
+
+  # ***************************************************************************************************************************
+  # **** Olvidar el estado de un dispositivo (al limpiar el historial)
+  # ***************************************************************************************************************************
+
+  def OlvidarEstadoMonitor(self):
+    """Borra el estado recordado del modo Monitor (tras 'Limpiar Historial')"""
+    self._dUltimoMonitor.clear()
 
 # #############################################################################################################################

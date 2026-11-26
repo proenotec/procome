@@ -99,6 +99,19 @@ se colocarán solas).
 - **Versión**: incrementar `_VERSION` en `PROCOME_FormPpal_Qt.py` y añadir la entrada en
   `VERSION.md` antes de cada commit funcional (MAJOR/MINOR/PATCH).
 
+## Telegram
+
+- `PROCOME_Telegram` envía avisos asíncronos (un hilo por mensaje) con `parse_mode=HTML`.
+- Estado recordado **por dirección**: la primera observación se guarda sin avisar; sólo se
+  notifica el cambio.
+- **Modo normal**: `GestorMultiTarjeta._ProcesarRespuestaMaqEstados` llama a
+  `NotificarEstadoComunicacion(estado == 2, dirección)`. La máquina de estados **no** debe
+  notificar (se duplicaría).
+- **Modo Monitor**: `_ThreadVigilanteTimeouts` pasa el estado de cada dispositivo cada
+  segundo a `NotificarEstadoMonitor(dirección, estado == 'Activo')`.
+- Configuración: `Telegram.Habilitado/Token/ChatID/NombreBot` en `PROCOME.cfg` (o diálogo
+  Configuración → Telegram, que tiene botón **Probar**). Sin `Habilitado=True` no se envía nada.
+
 ## Serial Port
 
 - pyserial con lecturas no bloqueantes (`timeout=0`, `write_timeout=0`).

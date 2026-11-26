@@ -81,7 +81,7 @@ class FormPpal:
   # - PATCH: Correcciones de errores y mejoras menores
   # ***************************************************************************************************************************
 
-  _VERSION = "3.1.2"
+  _VERSION = "3.2.0"
 
   # ***************************************************************************************************************************
   # **** __init__
@@ -1048,6 +1048,7 @@ class FormPpal:
     """Limpia el historial de dispositivos detectados"""
     if self._oGestorTarjetas._oDetectorDispositivos:
       self._oGestorTarjetas._oDetectorDispositivos.Reset()
+      self._oTelegram.OlvidarEstadoMonitor()
       self._ActualizarTablaMonitor()
 
 
@@ -1541,6 +1542,29 @@ class FormPpal:
         dVentanaCfgTelegram.accept()
       except Exception as e:
         QMessageBox.critical(dVentanaCfgTelegram, 'Error', 'Error al guardar la configuración: ' + str(e))
+
+    def _ProbarCfgTelegram():
+      try:
+        oTelegramPrueba = PROCOME_Telegram.PROCOME_Telegram(
+          bHabilitado = chk_habilitado.isChecked(),
+          sToken = ent_token.text().strip(),
+          sChatID = ent_chatid.text().strip(),
+          sNombreBot = ent_nombre.text().strip()
+        )
+        if not oTelegramPrueba.ConfiguracionValida:
+          QMessageBox.warning(dVentanaCfgTelegram, 'Aviso',
+            'Para probar hay que marcar "Habilitar", y el token y el Chat ID deben ser válidos.')
+          return
+        if oTelegramPrueba.EnviarMensajePrueba():
+          QMessageBox.information(dVentanaCfgTelegram, 'Prueba enviada',
+            'Se ha enviado un mensaje de prueba a Telegram.\nSi no llega, revisa el token y el Chat ID.')
+      except Exception as e:
+        QMessageBox.critical(dVentanaCfgTelegram, 'Error', 'No se pudo probar Telegram: ' + str(e))
+
+    btn_probar = QPushButton('Probar')
+    btn_probar.setStyleSheet("background-color: lightblue; color: black;")
+    btn_probar.clicked.connect(_ProbarCfgTelegram)
+    buttonLayout.addWidget(btn_probar)
 
     btn_guardar = QPushButton('Guardar')
     btn_guardar.setStyleSheet("background-color: lightgreen; color: black;")

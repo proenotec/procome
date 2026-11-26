@@ -121,7 +121,6 @@ class PROCOME_MaqEstados:
     self._oTelegram= oTelegram
     self._fnCallbackBeepTransmision = fnCallbackBeepTransmision
     self._fnCallbackBeepRecepcion = fnCallbackBeepRecepcion
-    self._bEstadoComunicacionAnterior= None  # Para detectar cambios de estado
 
     # Arbitraje de bus serial compartido
     self._oBusLock = oBusLock  # Lock compartido entre threads (desde GestorMultiTarjeta)
@@ -900,10 +899,6 @@ class PROCOME_MaqEstados:
       if (self._bVerMensDbg_Estado) : sTexto+= 'Estado= ' + self._lEstado[0] + '.' + self._lEstado[1] + ' / ' + self._sEstadoCom
       print('  << ProcesarEventos.Salida >>   ' + sTexto)
 
-    # **** Notificar cambios en el estado de comunicación por Telegram ***********************************************************
-
-    self._NotificarCambioEstadoComunicacion()
-
     return ''  
 
   # **** ProcesarEventos (Fin) ************************************************************************************************
@@ -1367,25 +1362,6 @@ class PROCOME_MaqEstados:
   # ===========================================================================================================================
   # ==== Notificar cambios en el estado de comunicación por Telegram
   # ===========================================================================================================================
-
-  def _NotificarCambioEstadoComunicacion(self):
-    """Detecta cambios en el estado de comunicación y envía notificaciones por Telegram"""
-    if self._oTelegram is None:
-      return
-
-    # Determinar el estado actual de comunicación
-    bComunicandoAhora = self.Comunicando()
-
-    # Si es la primera vez, solo guardar el estado sin notificar
-    if self._bEstadoComunicacionAnterior is None:
-      self._bEstadoComunicacionAnterior = bComunicandoAhora
-      return
-
-    # Si cambió el estado, notificar
-    if bComunicandoAhora != self._bEstadoComunicacionAnterior:
-      self._oTelegram.NotificarEstadoComunicacion(bComunicandoAhora, self._iDir)
-      self._bEstadoComunicacionAnterior = bComunicandoAhora
-
 
   # ===========================================================================================================================
   # ==== Transmitir una Trama

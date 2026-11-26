@@ -1,6 +1,6 @@
 # Control de Versiones - PROCOME
 
-## Versión Actual: 3.1.2
+## Versión Actual: 3.2.0
 
 ## Sistema de Versionado
 
@@ -70,6 +70,21 @@ git push
 ```
 
 ## Historial de Versiones
+
+### v3.2.0 (2026-11-26)
+**Avisos de Telegram por cambio de estado (modo normal y Monitor)**
+
+Características nuevas:
+- ✨ Modo Monitor: aviso cuando una tarjeta pasa de ACTIVO a TIMEOUT y cuando vuelve a transmitir
+- ✨ Botón **Probar** en Configuración → Telegram para enviar un mensaje de prueba
+- ✨ `EnviarMensajePrueba()` y `NotificarEstadoMonitor()` en el cliente de Telegram
+
+Correcciones:
+- 🐛 El estado anterior de comunicación era un único flag compartido por todas las tarjetas: ahora se guarda por dirección (las notificaciones de unas interferían con las de otras)
+- 🐛 Se mezclaban enteros (0/1/2) y booleanos al deduplicar (`0 == False`), lo que suprimía avisos
+- 🐛 La notificación se enviaba por dos caminos (Gestor y máquina de estados), con duplicados o supresiones: queda sólo en el Gestor
+- 🐛 La primera lectura enviaba un aviso espurio; ahora sólo se registra el estado inicial
+- 🐛 Revisado el modo normal: si `Telegram.Habilitado` está a `False` no se envía nada (en este PC estaba desactivado)
 
 ### v3.1.2 (2026-11-26)
 **Tabla del Monitor: líneas en blanco al detectar tarjetas**

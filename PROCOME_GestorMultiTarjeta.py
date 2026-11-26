@@ -424,7 +424,7 @@ class ThreadTarjeta(threading.Thread):
         self._fnCallbackEstado(self._iNrTarjeta, iEstadoCom)
 
       # Notificar por Telegram (solo cuando pasa a comunicando=2 o sin comunicación=0)
-      if self._oTelegram and self._oTelegram._bHabilitado:
+      if self._oTelegram and self._oTelegram.Habilitado:
         bComunicandoTelegram = (iEstadoCom == 2)
         self._oTelegram.NotificarEstadoComunicacion(bComunicandoTelegram, self._iDirRemota)
 
@@ -551,6 +551,7 @@ class GestorMultiTarjeta:
     self._bLectorMonitorRunning = False
     self._threadLector = None
     self._bLectorRunning = False
+    self._dEstadosMonitor = {}   # {direccion: 'Activo'|'Timeout'} en modo Monitor
 
 
   def SetCallbacks(self, fnEstado=None, fnMedidas=None, fnEstados=None, fnDatosEquipo=None, fnOrden=None, fnBeepTransmision=None, fnBeepRecepcion=None):
@@ -581,6 +582,7 @@ class GestorMultiTarjeta:
     if bActivar:
       import PROCOME_DetectorDispositivos
       self._oDetectorDispositivos = PROCOME_DetectorDispositivos.DetectorDispositivos(30.0)
+      self._dEstadosMonitor = {}
     else:
       # Detener thread vigilante si existe
       if self._threadVigilante and self._threadVigilante.is_alive():
@@ -756,10 +758,32 @@ class GestorMultiTarjeta:
 
 
   def _ThreadVigilanteTimeouts(self):
-    """Thread que actualiza timeouts de dispositivos cada segundo"""
+    """Actualiza los timeouts del modo Monitor y avisa de los cambios de estado"""
     while self._bModoMonitor and self._oDetectorDispositivos:
       try:
         self._oDetectorDispositivos.ActualizarTimeouts()
+
+        dDispositivos = self._oDetectorDispositivos.ObtenerDispositivos()
+        bAvisar = self._oTelegram is not None and self._oTelegram.Habilitado
+
+        for iDireccion, dInfo in dDispositivos.items():
+          sEstado = dInfo.get('Estado', 'Timeout')
+          sAnterior = self._dEstadosMonitor.get(iDireccion)
+          self._dEstadosMonitor[iDireccion] = sEstado
+
+          if sAnterior is not None and sAnterior != sEstado:
+            print(f'[MONITOR] Tarjeta {iDireccion}: {sAnterior} -> {sEstado}')
+
+          # Se pasa siempre: Telegram guarda la primera observación sin avisar
+          # y notifica a partir del primer cambio real.
+          if bAvisar:
+            self._oTelegram.NotificarEstadoMonitor(iDireccion, sEstado == 'Activo')
+
+        # Olvidar dispositivos que ya no están (p. ej. tras "Limpiar Historial")
+        for iDireccion in list(self._dEstadosMonitor):
+          if iDireccion not in dDispositivos:
+            del self._dEstadosMonitor[iDireccion]
+
         time.sleep(1.0)
       except:
         break
